@@ -1,5 +1,5 @@
 //! Shared loopback server for generated sites.
-use crate::{assets, cli, document};
+use crate::{cli, document};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, OpenOptions},
@@ -19,6 +19,17 @@ fn shared_root() -> PathBuf {
 
 fn hash(value: &[u8]) -> String {
     format!("{:x}", Sha256::digest(value))
+}
+
+fn preview_relative_url(root: &Path, page: &Path) -> Result<String, String> {
+    let root = dunce::canonicalize(root).map_err(|e| e.to_string())?;
+    let page = dunce::canonicalize(page).map_err(|e| e.to_string())?;
+    page.strip_prefix(&root)
+        .map_err(|_| "preview page is outside preview root")?;
+    let base = url::Url::from_directory_path(&root).map_err(|_| "invalid preview root")?;
+    let file = url::Url::from_file_path(&page).map_err(|_| "invalid preview page")?;
+    base.make_relative(&file)
+        .ok_or_else(|| "invalid preview URL".to_owned())
 }
 
 fn notification_path(root: &Path, page: &Path) -> PathBuf {
@@ -275,10 +286,7 @@ pub fn compile(values: Vec<String>) -> Result<(), String> {
     let page = crate::site::page_path(&site.join(relative));
     let page = dunce::canonicalize(page).map_err(|e| e.to_string())?;
     notify(&shared_root(), &page, fragment.as_deref())?;
-    let base = url::Url::from_directory_path(shared_root()).map_err(|_| "invalid preview root")?;
-    let relative = base
-        .make_relative(&assets::file_url(&page)?)
-        .ok_or("invalid preview URL")?;
+    let relative = preview_relative_url(&shared_root(), &page)?;
     println!("http://{ADDRESS}/{relative}");
     Ok(())
 }
@@ -483,6 +491,34 @@ mod tests {
         let second = notification(dir.path(), &page);
         assert_ne!(first["revision"], second["revision"]);
         assert!(second["fragment"].is_null());
+    }
+    #[test]
+    fn preview_url_is_encoded_and_rejects_outside_pages() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("preview");
+        let page = root.join("空 格").join("index.html");
+        fs::create_dir_all(page.parent().unwrap()).unwrap();
+        fs::write(&page, "test").unwrap();
+        assert_eq!(
+            preview_relative_url(&root, &page).unwrap(),
+            "%E7%A9%BA%20%E6%A0%BC/index.html"
+        );
+        let outside = dir.path().join("outside.html");
+        fs::write(&outside, "test").unwrap();
+        assert!(preview_relative_url(&root, &outside).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn preview_url_normalizes_root_alias() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("preview");
+        fs::create_dir(&root).unwrap();
+        let page = root.join("index.html");
+        fs::write(&page, "test").unwrap();
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(&root, &alias).unwrap();
+        assert_eq!(preview_relative_url(&alias, &page).unwrap(), "index.html");
     }
     #[test]
     fn project_ids_are_stable_and_distinct() {
