@@ -1,0 +1,708 @@
+/* Based on https://github.com/sindresorhus/github-markdown-css.
+ * Code block colors live in highlight.css.
+ */
+/* Official Iosevka 34.9.0 WebFont; native Typst TTFs remain in ../../fonts. */
+@font-face {
+  font-family: "Iosevka";
+  src: url("../fonts/Iosevka-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Iosevka";
+  src: url("../fonts/Iosevka-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: "Lib Source Han Serif";
+  src: url("../../fonts/SourceHanSerifCN-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+2E80-2FFF, U+3000-30FF, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-2FA1F;
+}
+@font-face {
+  font-family: "Lib Source Han Serif";
+  src: url("../../fonts/SourceHanSerifCN-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+2E80-2FFF, U+3000-30FF, U+31C0-31EF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-2FA1F;
+}
+:root {
+  --md-font-serif: Georgia, "Lib Source Han Serif", "Source Han Serif SC", "Source Han Serif CN VF", "Source Han Serif", "Source Han Serif CN", "Noto Serif CJK SC", "Songti SC", "SimSun", "Libertinus Serif", "New Computer Modern", "Times New Roman", serif;
+  --md-font-sans: "Source Han Sans CN VF", "Source Han Sans", "Source Han Sans CN", "Source Han Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --md-font-mono: "Iosevka", ui-monospace, SFMono-Regular, Menlo, Consolas, "Source Han Sans CN VF", "Source Han Sans", "Source Han Sans CN", "Source Han Sans SC", monospace;
+  --md-code-font-size: 14px;
+  --md-code-line-height: 1.45;
+  --md-font: var(--md-font-serif);
+  --md-fg: light-dark(#363733, #f0f6fc);
+  --md-bg: light-dark(#fdfdfc, #212830);
+  --md-canvas: light-dark(#f8f9f8, #0d1117);
+  --md-muted: light-dark(#73746e, #9198a1);
+  --md-border: light-dark(#dfe1df, #3d444d);
+  --md-border-muted: light-dark(#e9ebe9, #3d444db3);
+  --md-link: light-dark(#555c58, #478be6);
+  --md-accent: light-dark(#777c78, #478be6);
+  --md-mark-bg: light-dark(#e9ecea, #ae7c1426);
+  --md-kbd-bg: light-dark(#f4f5f4, #262c36);
+  --md-table-alt-bg: light-dark(#f8f9f8, #262c36);
+  --md-quote-bg: light-dark(#f8f9f8, #262c36);
+  --md-code-bg: light-dark(#e9ecea, #656c7633);
+  --md-code-fg: light-dark(#363733, #c9d1d9);
+  --md-pre-bg: light-dark(#f4f5f4, #262c36);
+  --md-danger: light-dark(#d1242f, #e5534b);
+}
+
+
+@scope (#content) {
+:scope {
+  --md-block-indent: 2rem;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: var(--markdown-padding, 0);
+  -webkit-text-size-adjust: 100%;
+  font-weight: 400;
+  color: var(--md-fg);
+  background-color: var(--md-bg);
+  font-family: var(--md-font);
+  font-size: 17px;
+  line-height: 1.75;
+  word-wrap: break-word;
+}
+
+/* Keep fenced-code labels in place when the code scrolls horizontally. */
+:scope .code-wrap {
+  position: relative;
+  margin: 1.25rem 0;
+}
+
+:scope .code-wrap pre {
+  margin: 0;
+  border-radius: 5px;
+}
+
+:scope .code-wrap .code-lang {
+  position: absolute;
+  top: 0;
+  right: .75rem;
+  z-index: 2;
+  padding: 0 .35rem;
+  color: var(--md-muted);
+  background: var(--md-bg);
+  font: 500 .68rem/1.6 var(--md-font-mono);
+  letter-spacing: .035em;
+  transform: translateY(-50%);
+}
+
+:scope details {
+  display: block;
+}
+
+:scope summary {
+  display: list-item;
+}
+
+:scope [hidden] {
+  display: none !important;
+}
+
+:scope a {
+  background-color: rgba(0,0,0,0);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: .12em;
+}
+
+:scope abbr[title] {
+  border-bottom: none;
+  text-decoration: underline dotted;
+}
+
+:scope b,
+:scope strong {
+  font-weight: 600;
+}
+
+:scope dfn {
+  font-style: italic;
+}
+
+:scope h1 {
+  margin-inline: 0;
+  padding-bottom: .3em;
+  font-size: 1.6em;
+  border-bottom: 1px solid var(--md-border-muted);
+}
+
+:scope mark {
+  background-color: var(--md-mark-bg);
+  color: var(--md-fg);
+}
+
+:scope small {
+  font-size: 90%;
+}
+
+:scope sub,
+:scope sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+:scope sub {
+  bottom: -0.25em;
+}
+
+:scope sup {
+  top: -0.5em;
+}
+
+/* Keep images at their own size, up to 90% of the text column.
+ * Grid children otherwise stretch standalone images across the column.
+ */
+:scope img {
+  border-style: none;
+  max-width: 90%;
+  height: auto;
+  justify-self: start;
+  box-sizing: border-box;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
+:scope code,
+:scope tt,
+:scope kbd,
+:scope pre,
+:scope samp {
+  font-family: var(--md-font-mono);
+  font-weight: 400;
+  font-size: var(--md-code-font-size);
+}
+
+:scope figure {
+  display: table;
+  width: max-content;
+  min-width: 0;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+:scope figure img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+:scope figcaption {
+  display: table-caption;
+  padding-top: .5rem;
+  color: var(--md-muted);
+  font-size: .875rem;
+  line-height: 1.5;
+  text-align: center;
+  caption-side: bottom;
+}
+
+:scope hr {
+  box-sizing: content-box;
+  overflow: hidden;
+  height: .25em;
+  padding: 0;
+  margin: 1.5rem 0;
+  background-color: var(--md-border);
+  border: 0;
+}
+
+:scope input {
+  font: inherit;
+  margin: 0;
+  overflow: visible;
+}
+
+:scope [type=button],
+:scope [type=reset],
+:scope [type=submit] {
+  appearance: button;
+}
+
+:scope [type=checkbox],
+:scope [type=radio] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+:scope [type=number]::-webkit-inner-spin-button,
+:scope [type=number]::-webkit-outer-spin-button {
+  height: auto;
+}
+
+:scope [type=search]::-webkit-search-cancel-button,
+:scope [type=search]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+:scope ::file-selector-button {
+  appearance: button;
+  font: inherit;
+}
+
+:scope a:hover {
+  text-decoration: underline;
+}
+
+:scope ::placeholder {
+  color: var(--md-muted);
+  opacity: 1;
+}
+
+:scope hr::before {
+  display: table;
+  content: "";
+}
+
+:scope hr::after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+:scope table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  font-variant: tabular-nums;
+  font-size: .875rem;
+  text-align: left;
+}
+
+:scope table caption {
+  padding-top: .5rem;
+  color: var(--md-muted);
+  font-size: .875rem;
+  line-height: 1.5;
+  text-align: center;
+  caption-side: bottom;
+}
+
+:scope td,
+:scope th {
+  padding: 0;
+}
+
+:scope details summary {
+  cursor: pointer;
+}
+
+:scope a:focus,
+:scope [role=button]:focus,
+:scope input[type=radio]:focus,
+:scope input[type=checkbox]:focus {
+  outline: 2px solid var(--md-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+:scope a:focus:not(:focus-visible),
+:scope [role=button]:focus:not(:focus-visible),
+:scope input[type=radio]:focus:not(:focus-visible),
+:scope input[type=checkbox]:focus:not(:focus-visible) {
+  outline: solid 1px rgba(0,0,0,0);
+}
+
+:scope a:focus-visible,
+:scope [role=button]:focus-visible,
+:scope input[type=radio]:focus-visible,
+:scope input[type=checkbox]:focus-visible {
+  outline: 2px solid var(--md-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+:scope a:not([class]):focus,
+:scope a:not([class]):focus-visible,
+:scope input[type=radio]:focus,
+:scope input[type=radio]:focus-visible,
+:scope input[type=checkbox]:focus,
+:scope input[type=checkbox]:focus-visible {
+  outline-offset: 0;
+}
+
+:scope kbd {
+  display: inline-block;
+  padding: 0.25rem;
+  font: 11px ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  line-height: 10px;
+  color: var(--md-fg);
+  vertical-align: middle;
+  background-color: var(--md-pre-bg);
+  border: solid 1px var(--md-border);
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 var(--md-border);
+}
+
+:scope h1,
+:scope h2,
+:scope h3,
+:scope h4,
+:scope h5,
+:scope h6 {
+  font-family: var(--md-font-serif);
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:scope h2 {
+  padding-bottom: .3em;
+  font-size: 1.25em;
+  border-bottom: 1px solid var(--md-border-muted);
+}
+
+:scope h3 {
+  font-size: 1.1em;
+}
+
+:scope h4 {
+  font-size: 1em;
+}
+
+:scope h5 {
+  font-size: 1em;
+}
+
+:scope h6 {
+  font-size: 1em;
+  color: var(--md-muted);
+}
+
+:scope blockquote,
+:scope .inline-footnote {
+  margin-inline: 0;
+  padding: .2rem 0 .2rem calc(var(--md-block-indent) - 2px);
+  color: var(--md-muted);
+  border-left: 2px solid var(--md-border-muted);
+  box-sizing: border-box;
+}
+
+:scope ul,
+:scope ol {
+  margin-inline: 0;
+  padding-inline: var(--md-block-indent) 0;
+  list-style-position: outside;
+}
+
+:scope ol ol,
+:scope ul ol {
+  list-style-type: lower-roman;
+}
+
+:scope ul ul ol,
+:scope ul ol ol,
+:scope ol ul ol,
+:scope ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+:scope dd {
+  margin-left: 0;
+}
+
+:scope pre {
+  word-wrap: normal;
+}
+
+:scope input::-webkit-outer-spin-button,
+:scope input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+:scope>*:first-child {
+  margin-top: 0 !important;
+}
+
+:scope>*:last-child {
+  margin-bottom: 0 !important;
+}
+
+:scope a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+:scope p,
+:scope blockquote,
+:scope .inline-footnote,
+:scope figure,
+:scope ul,
+:scope ol,
+:scope dl,
+:scope table,
+:scope pre,
+:scope details {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+:scope > img,
+:scope .heading-content > img {
+  margin-bottom: 1rem;
+}
+
+:scope blockquote>:first-child,
+:scope .inline-footnote>:first-child {
+  margin-top: 0;
+}
+
+:scope blockquote>:last-child,
+:scope .inline-footnote>:last-child {
+  margin-bottom: 0;
+}
+
+:scope h1 tt,
+:scope h1 code,
+:scope h2 tt,
+:scope h2 code,
+:scope h3 tt,
+:scope h3 code,
+:scope h4 tt,
+:scope h4 code,
+:scope h5 tt,
+:scope h5 code,
+:scope h6 tt,
+:scope h6 code {
+  padding: 0 .2em;
+  font-size: inherit;
+}
+
+:scope summary h1,
+:scope summary h2,
+:scope summary h3,
+:scope summary h4,
+:scope summary h5,
+:scope summary h6 {
+  display: inline-block;
+}
+
+:scope summary h1,
+:scope summary h2 {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+:scope ul ul,
+:scope ul ol,
+:scope ol ol,
+:scope ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+:scope li>p {
+  margin-top: 1rem;
+}
+
+:scope li+li {
+  margin-top: .25em;
+}
+
+:scope dl {
+  padding: 0;
+}
+
+:scope dl dt {
+  padding: 0;
+  margin-top: 1rem;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: 600;
+}
+
+:scope dl dd {
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+}
+
+:scope table th {
+  font-weight: 600;
+  text-align: left;
+}
+
+:scope table th,
+:scope table td {
+  padding: 8px 20px;
+  border: 0;
+  border-top: 1px solid var(--md-border-muted);
+}
+
+:scope table td>:last-child {
+  margin-bottom: 0;
+}
+
+:scope table tr {
+  background-color: var(--md-bg);
+  border-top: 1px solid var(--md-border-muted);
+}
+
+:scope table tr:nth-child(2n) {
+  background-color: var(--md-pre-bg);
+}
+
+:scope table tr:last-child td,
+:scope table tr:last-child th {
+  border-bottom: 1px solid var(--md-border-muted);
+}
+
+:scope table img {
+  background-color: rgba(0,0,0,0);
+}
+
+:scope img[align=right] {
+  padding-left: 20px;
+}
+
+:scope img[align=left] {
+  padding-right: 20px;
+}
+
+:scope code,
+:scope tt {
+  padding: 0 .4em;
+  margin: 0;
+  font-size: var(--md-code-font-size);
+  line-height: inherit;
+  white-space: break-spaces;
+  color: var(--md-code-fg);
+  background-color: var(--md-code-bg);
+  border-radius: 6px;
+}
+
+/* Keep the inline-code background on the prose baseline. */
+:scope :not(pre) > code,
+:scope :not(pre) > tt {
+  vertical-align: 0.1em;
+}
+
+:scope code br,
+:scope tt br {
+  display: none;
+}
+
+:scope del code {
+  text-decoration: inherit;
+}
+
+:scope pre>code {
+  padding: 0;
+  margin: 0;
+  word-break: normal;
+  white-space: pre;
+  background: rgba(0,0,0,0);
+  border: 0;
+}
+
+:scope .highlight {
+  margin-bottom: 1rem;
+}
+
+:scope .highlight pre {
+  margin-bottom: 0;
+  word-break: normal;
+}
+
+:scope .highlight pre,
+:scope pre {
+  padding: 1rem;
+  overflow: auto;
+  line-height: var(--md-code-line-height);
+  border-radius: 6px;
+}
+
+/* Code-frame chrome belongs to the document theme; highlight.css only owns
+ * syntax-token colors. */
+:scope pre:has(> code),
+:scope pre.hljs {
+  background-color: color-mix(in srgb, var(--md-bg) 98%, var(--md-muted));
+  border: 1px solid color-mix(in srgb, var(--md-border) 78%, transparent);
+}
+
+:scope pre code,
+:scope pre tt,
+:scope pre span,
+:scope code span {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  font-family: var(--md-font-mono);
+  font-size: var(--md-code-font-size);
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: rgba(0,0,0,0);
+  border: 0;
+}
+
+:scope [role=button]:focus:not(:focus-visible),
+:scope [role=tabpanel][tabindex="0"]:focus:not(:focus-visible),
+:scope button:focus:not(:focus-visible),
+:scope summary:focus:not(:focus-visible),
+:scope a:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+:scope [tabindex="0"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:scope .task-list-item {
+  list-style-type: none;
+}
+
+:scope .task-list-item label {
+  font-weight: 400;
+}
+
+:scope .task-list-item.enabled label {
+  cursor: pointer;
+}
+
+:scope .task-list-item+.task-list-item {
+  margin-top: 0.25rem;
+}
+
+:scope .task-list-item-checkbox {
+  margin: 0 .2em .25em -1.4em;
+  vertical-align: middle;
+}
+
+:scope ul:dir(rtl) .task-list-item-checkbox {
+  margin: 0 -1.6em .25em .2em;
+}
+
+:scope ol:dir(rtl) .task-list-item-checkbox {
+  margin: 0 -1.6em .25em .2em;
+}
+
+:scope ::-webkit-calendar-picker-indicator {
+  filter: invert(50%);
+}
+
+:scope .katex { font-size: 1em; }
+
+}

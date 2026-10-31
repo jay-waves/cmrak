@@ -1,0 +1,28 @@
+/* Shared Chartist defaults. Axis titles use ct-axis-title-x / ct-axis-title-y. */
+.ct-chart-line, .ct-chart-bar, .ct-chart-pie {
+  font-family: Georgia, "Source Han Serif", "Noto Serif CJK SC", serif;
+  font-size: 11px;
+  color: #344651;
+}
+.ct-label, .ct-axis-title-x, .ct-axis-title-y, .ct-legend {
+  font-family: Georgia, "Source Han Serif", "Noto Serif CJK SC", serif;
+  font-size: 11px;
+  fill: #52636b;
+}
+.ct-axis-title-x { writing-mode: horizontal-tb; text-anchor: middle; }
+.ct-axis-title-y { writing-mode: vertical-rl; text-anchor: middle; }
+.ct-grid { stroke: #dce3e6; stroke-width: 0.7px; }
+.ct-series-a .ct-line, .ct-series-a .ct-point, .ct-series-a .ct-bar, .ct-series-a .ct-slice-donut { stroke: #618ba2; }
+.ct-series-b .ct-line, .ct-series-b .ct-point, .ct-series-b .ct-bar, .ct-series-b .ct-slice-donut { stroke: #507c6c; }
+.ct-series-c .ct-line, .ct-series-c .ct-point, .ct-series-c .ct-bar, .ct-series-c .ct-slice-donut { stroke: #bd876b; }
+.ct-series-d .ct-line, .ct-series-d .ct-point, .ct-series-d .ct-bar, .ct-series-d .ct-slice-donut { stroke: #86a9bd; }
+.ct-series-a .ct-area, .ct-series-a .ct-slice-pie { fill: #618ba2; }
+.ct-series-b .ct-area, .ct-series-b .ct-slice-pie { fill: #507c6c; }
+.ct-series-c .ct-area, .ct-series-c .ct-slice-pie { fill: #bd876b; }
+.ct-series-d .ct-area, .ct-series-d .ct-slice-pie { fill: #86a9bd; }
+.ct-line { fill: none; stroke-width: 1.5px; stroke-linejoin: round; stroke-linecap: round; }
+.ct-point { stroke-width: 4px; stroke-linecap: round; }
+.ct-bar { fill: none; stroke-width: 10px; }
+.ct-area { fill-opacity: 0.18; }
+.ct-slice-pie { stroke: #ffffff; stroke-width: 1px; }
+.ct-slice-donut { fill: none; stroke-width: 30px; }

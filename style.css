@@ -1,0 +1,37 @@
+:root {
+  color-scheme: light dark;
+  /* Prefer the regular system face on Apple platforms when Iosevka is absent. */
+  --md-font-mono: Menlo, Consolas, "Liberation Mono", ui-monospace, monospace;
+}
+body { margin: 0; background: var(--md-bg); }
+#content { font-family: var(--md-font-serif); width: min(95%, 920px); padding: 0; margin: 32px auto; }
+#content img, #content video { max-width: 100%; height: auto; }
+@media print { :root { color-scheme: light; } #content { width: auto; margin: 0; } }
+/* Keep document headings on the same Latin/CJK serif stack. */
+#content h1, #content h2, #content h3, #content h4, #content h5, #content h6 { font-family: var(--md-font-serif); }
+/* Static headings are wrapped in a summary; keep h2 styled like a normal heading. */
+#content details.heading-section > .heading-summary > h2 {
+  width: 100%;
+  box-sizing: border-box;
+  font-weight: 600;
+  border-bottom: 1px solid var(--md-border-muted);
+}
+#content :is(pre, code, kbd, samp, tt) { font-synthesis-weight: none; }
+#content .inline-footnote {
+  display: block;
+  min-width: 0;
+  margin: .35em 0 1rem 1rem;
+  padding: .2rem 0 .2rem calc(var(--md-block-indent) - 1rem - 2px);
+  border-left: 2px dashed var(--md-border-muted);
+  color: var(--md-muted);
+}
+#content .inline-footnote[hidden] { display: none; }
+#content .note-content { min-width: 0; overflow-wrap: anywhere; }
+#content .note-content > :first-child { margin-top: 0; }
+#content .note-content > :last-child { margin-bottom: 0; }
+#content [data-footnote-ref] { position: relative; color: var(--md-muted); text-decoration: none; }
+#content [data-footnote-ref]::after { content: ""; position: absolute; inset: -10px -9px; }
+#content figure.graph-figure { box-sizing: border-box; display: table; width: min(100%, var(--viz-width, 640px)); max-width: 100%; margin: 1.75rem auto; }
+#content .graph-figure .diagram { margin: 0; }
+#content .graph-figure .diagram svg { width: 100%; }
+#content .graph-figure .viz { width: 100%; margin: 0; }

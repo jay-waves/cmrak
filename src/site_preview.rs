@@ -1,0 +1,324 @@
+//! Shared loopback server for generated sites.
+use crate::{assets, cli, document};
+use sha2::{Digest, Sha256};
+use std::{
+    fs::{self, OpenOptions},
+    io::{Read, Write},
+    net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream},
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+    time::{Duration, Instant},
+};
+
+const ADDRESS: &str = "127.0.0.1:8765";
+const SERVICE: &str = "lib.comrak-preview-v1";
+const RELOAD: &str = r#"<script data-comrak-preview>(()=>{let etag=__ETAG__;async function check(){try{let r=await fetch(location.href,{method:'HEAD',cache:'no-store'});let next=r.headers.get('etag');if(etag&&next&&etag!==next){location.reload();return}if(next)etag=next}catch{}}check();setInterval(check,750)})();</script>"#;
+
+fn shared_root() -> PathBuf {
+    std::env::temp_dir().join("lib-comrak-preview")
+}
+
+fn hash(value: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(value))
+}
+
+fn project_name(root: &Path) -> String {
+    let path = root.to_string_lossy().replace('\\', "/");
+    #[cfg(windows)]
+    let path = path.to_lowercase();
+    hash(path.as_bytes())[..16].to_owned()
+}
+
+fn request(method: &str, path: &str) -> Result<String, String> {
+    let address: SocketAddr = ADDRESS.parse().unwrap();
+    let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(300))
+        .map_err(|e| e.to_string())?;
+    stream
+        .set_read_timeout(Some(Duration::from_millis(500)))
+        .map_err(|e| e.to_string())?;
+    write!(stream, "{method} {path} HTTP/1.1\r\nHost: {ADDRESS}\r\nX-Preview-Control: stop\r\nConnection: close\r\n\r\n").map_err(|e| e.to_string())?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|e| e.to_string())?;
+    Ok(response)
+}
+
+fn healthy(root: &Path) -> bool {
+    let Ok(response) = request("GET", "/_preview/health") else {
+        return false;
+    };
+    let Some((header, body)) = response.split_once("\r\n\r\n") else {
+        return false;
+    };
+    if !header.starts_with("HTTP/1.1 200 ") {
+        return false;
+    }
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(body) else {
+        return false;
+    };
+    value["service"] == SERVICE
+        && value["root"]
+            .as_str()
+            .is_some_and(|path| dunce::canonicalize(path).ok() == dunce::canonicalize(root).ok())
+}
+
+fn ensure_server(root: &Path) -> Result<(), String> {
+    fs::create_dir_all(root).map_err(|e| e.to_string())?;
+    if healthy(root) {
+        return Ok(());
+    }
+    if TcpStream::connect_timeout(&ADDRESS.parse().unwrap(), Duration::from_millis(200)).is_err() {
+        let mut child = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
+        child
+            .arg("__site_preview_server")
+            .arg(root)
+            .arg("8765")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            child.creation_flags(0x00000208);
+        }
+        child
+            .spawn()
+            .map_err(|e| format!("cannot start preview server: {e}"))?;
+    }
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline {
+        if healthy(root) {
+            return Ok(());
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Err(format!(
+        "preview service unavailable or {ADDRESS} belongs to another service"
+    ))
+}
+
+/// Compile to the shared preview site and print a reusable URL.
+pub fn compile(values: Vec<String>) -> Result<(), String> {
+    let mut arguments = vec!["compile".to_owned()];
+    arguments.extend(values);
+    let Some(original) = cli::parse(arguments.clone())? else {
+        return Ok(());
+    };
+    if original.site_root.is_some()
+        || original.output != original.input.with_extension("html")
+        || original.standalone && arguments.iter().any(|arg| arg == "--standalone")
+    {
+        return Err(
+            "serve INPUT manages its site output; omit output, --site-root and --standalone".into(),
+        );
+    }
+    let root = dunce::canonicalize(original.root.as_deref().unwrap_or(Path::new(".")))
+        .map_err(|e| e.to_string())?;
+    let input = dunce::canonicalize(&original.input).map_err(|e| e.to_string())?;
+    let relative = input
+        .strip_prefix(&root)
+        .map_err(|_| "input must be inside --root")?;
+    let site = shared_root().join(project_name(&root)).join("md");
+    arguments.push("--site-root".into());
+    arguments.push(site.to_string_lossy().into_owned());
+    let args = cli::parse(arguments)?.ok_or("no input")?;
+    let locks = shared_root().join(".locks");
+    fs::create_dir_all(&locks).map_err(|e| e.to_string())?;
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(locks.join(format!("{}.lock", hash(input.to_string_lossy().as_bytes()))))
+        .map_err(|e| e.to_string())?;
+    lock.lock()
+        .map_err(|e| format!("cannot lock compilation: {e}"))?;
+    document::compile(&args).map_err(|errors| {
+        errors
+            .into_iter()
+            .map(|d| {
+                format!(
+                    "{}:{}:{}: error: {}",
+                    args.input.display(),
+                    d.line,
+                    d.column,
+                    d.message
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?;
+    ensure_server(&shared_root())?;
+    let page = crate::site::page_path(&site.join(relative));
+    let base = url::Url::from_directory_path(shared_root()).map_err(|_| "invalid preview root")?;
+    let relative = base
+        .make_relative(&assets::file_url(&page)?)
+        .ok_or("invalid preview URL")?;
+    println!("http://{ADDRESS}/{relative}");
+    Ok(())
+}
+
+pub fn stop() -> Result<(), String> {
+    if !healthy(&shared_root()) {
+        return Err(format!("preview service is not running on {ADDRESS}"));
+    }
+    let response = request("POST", "/_preview/shutdown")?;
+    if response.starts_with("HTTP/1.1 200 ") {
+        Ok(())
+    } else {
+        Err("preview service refused shutdown".into())
+    }
+}
+
+pub fn serve(root: &Path, port: u16) -> Result<(), String> {
+    fs::create_dir_all(root).map_err(|e| e.to_string())?;
+    let root = dunce::canonicalize(root).map_err(|e| e.to_string())?;
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).map_err(|e| e.to_string())?;
+    eprintln!(
+        "Preview: http://{}/\nDirectory: {}",
+        listener.local_addr().map_err(|e| e.to_string())?,
+        root.display()
+    );
+    for stream in listener.incoming() {
+        let stream = stream.map_err(|e| e.to_string())?;
+        let root = root.clone();
+        std::thread::spawn(move || {
+            let _ = respond(stream, &root);
+        });
+    }
+    Ok(())
+}
+
+fn safe_file(root: &Path, target: &str) -> Option<PathBuf> {
+    let url = url::Url::parse("http://localhost/")
+        .ok()?
+        .join(target)
+        .ok()?;
+    let base = url::Url::from_directory_path(root).ok()?;
+    let path = url.path().strip_prefix('/')?;
+    let mut file = base.join(path).ok()?.to_file_path().ok()?;
+    if file.is_dir() {
+        file.push("index.html");
+    }
+    let file = dunce::canonicalize(file).ok()?;
+    (file.starts_with(root) && file.is_file()).then_some(file)
+}
+
+fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
+    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(2)))?;
+    let mut data = [0; 16384];
+    let mut length = 0;
+    while length < data.len() && !data[..length].windows(4).any(|w| w == b"\r\n\r\n") {
+        let n = stream.read(&mut data[length..])?;
+        if n == 0 {
+            break;
+        }
+        length += n;
+    }
+    let request = String::from_utf8_lossy(&data[..length]);
+    let mut first = request.lines().next().unwrap_or("").split_whitespace();
+    let method = first.next().unwrap_or("");
+    let target = first.next().unwrap_or("");
+    let clean = target.split('?').next().unwrap_or("");
+    if clean == "/_preview/shutdown" {
+        let permitted = method == "POST"
+            && !request
+                .lines()
+                .any(|line| line.to_ascii_lowercase().starts_with("origin:"))
+            && request
+                .lines()
+                .any(|line| line.eq_ignore_ascii_case("x-preview-control: stop"));
+        if permitted {
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")?;
+            std::process::exit(0);
+        }
+        stream.write_all(
+            b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )?;
+        return Ok(());
+    }
+    if method != "GET" && method != "HEAD" {
+        stream.write_all(
+            b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )?;
+        return Ok(());
+    }
+    if clean == "/_preview/health" {
+        let body = serde_json::json!({"service": SERVICE, "root": root}).to_string();
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            if method == "HEAD" { "" } else { &body }
+        )?;
+        return Ok(());
+    }
+    let Some(file) = safe_file(root, target) else {
+        stream.write_all(
+            b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )?;
+        return Ok(());
+    };
+    if !clean.ends_with('/')
+        && !clean.ends_with("/index.html")
+        && file.file_name().is_some_and(|name| name == "index.html")
+    {
+        let query = target
+            .split_once('?')
+            .map_or(String::new(), |(_, query)| format!("?{query}"));
+        write!(
+            stream,
+            "HTTP/1.1 301 Moved Permanently\r\nLocation: {clean}/{query}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        )?;
+        return Ok(());
+    }
+    let mut body = fs::read(&file)?;
+    let etag = hash(&body);
+    let html = file
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("html") || e.eq_ignore_ascii_case("htm"));
+    if html {
+        let index = body
+            .windows(7)
+            .rposition(|b| b.eq_ignore_ascii_case(b"</body>"))
+            .unwrap_or(body.len());
+        let revision = serde_json::to_string(&format!("\"{etag}\"")).unwrap();
+        let script = RELOAD.replace("__ETAG__", &revision);
+        body.splice(index..index, script.bytes());
+    }
+    let mime = mime_guess::from_path(&file).first_or_octet_stream();
+    write!(
+        stream,
+        "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nContent-Length: {}\r\nETag: \"{etag}\"\r\nCache-Control: no-cache\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
+        body.len()
+    )?;
+    if method == "GET" {
+        stream.write_all(&body)?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn file_routes_stay_under_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(dir.path()).unwrap();
+        fs::create_dir(root.join("nested")).unwrap();
+        fs::write(root.join("nested/index.html"), "hello").unwrap();
+        assert_eq!(
+            safe_file(&root, "/nested/?v=1"),
+            Some(root.join("nested/index.html"))
+        );
+        assert!(safe_file(&root, "/%2e%2e/etc/passwd").is_none());
+    }
+    #[test]
+    fn project_ids_are_stable_and_distinct() {
+        assert_eq!(project_name(Path::new("/a")), project_name(Path::new("/a")));
+        assert_ne!(project_name(Path::new("/a")), project_name(Path::new("/b")));
+    }
+}

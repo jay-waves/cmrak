@@ -1,0 +1,157 @@
+name: Build and update comrakk 0.5.0
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: comrakk-release-0.5.0
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npm run build:comrak-assets
+      - run: cargo fmt -p lib-comrak --check
+      - run: cargo test --release --locked -p lib-comrak
+      - run: cargo clippy --release --locked -p lib-comrak --all-targets -- -D warnings
+      - run: npm run package:comrak
+      - name: Smoke test packaged executable
+        shell: pwsh
+        run: |
+          $inputPath = Join-Path $env:RUNNER_TEMP 'comrak-smoke.md'
+          $outputPath = Join-Path $env:RUNNER_TEMP 'comrak-smoke.html'
+          @'
+          # Renderer smoke test
+
+          [License](license.md)
+
+          $x^2$
+
+          ```js
+          const x = 1;
+          ```
+
+          ```mermaid
+          flowchart LR
+            A --> B
+          ```
+          '@ | Set-Content -Encoding utf8 $inputPath
+          & ./release/comrakk-win32-x64/comrakk.exe $inputPath $outputPath --standalone --root $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $html = Get-Content -Raw $outputPath
+          foreach ($marker in @('katex', 'hljs-keyword', '<svg', 'license.md')) {
+            if (-not $html.Contains($marker)) { throw "Missing rendered marker: $marker" }
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: comrakk-windows-x64
+          path: release/comrakk-win32-x64/
+          if-no-files-found: error
+          retention-days: 90
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npm run build:comrak-assets
+      - run: cargo fmt -p lib-comrak --check
+      - run: cargo test --release --locked -p lib-comrak
+      - run: cargo clippy --release --locked -p lib-comrak --all-targets -- -D warnings
+      - run: npm run package:comrak
+      - name: Smoke test packaged executable
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/comrak-smoke.md" <<'EOF'
+          # Renderer smoke test
+
+          [License](license.md)
+
+          $x^2$
+
+          ```js
+          const x = 1;
+          ```
+
+          ```mermaid
+          flowchart LR
+            A --> B
+          ```
+          EOF
+          ./release/comrakk-linux-x64/comrakk "$RUNNER_TEMP/comrak-smoke.md" "$RUNNER_TEMP/comrak-smoke.html" --root "$RUNNER_TEMP"
+          for marker in katex hljs-keyword '<svg' license.md; do
+            if ! grep -Fq "$marker" "$RUNNER_TEMP/comrak-smoke.html"; then
+              printf 'Missing rendered marker: %s\n' "$marker" >&2
+              exit 1
+            fi
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: comrakk-linux-x64
+          path: release/comrakk-linux-x64/
+          if-no-files-found: error
+          retention-days: 90
+
+
+  release:
+    name: Update 0.5.0 release
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          name: comrakk-linux-x64
+          path: release-linux
+      - uses: actions/download-artifact@v7
+        with:
+          name: comrakk-windows-x64
+          path: release-windows
+      - name: Prepare release assets
+        run: |
+          mkdir release-assets
+          cp release-linux/comrakk release-assets/comrakk-linux-x64
+          cp release-windows/comrakk.exe release-assets/comrakk-windows-x64.exe
+          cp release-linux/LICENSE release-linux/*-LICENSE release-assets/
+      - name: Point 0.5.0 tag at this build
+        run: |
+          git tag --force 0.5.0 "$GITHUB_SHA"
+          git push --force origin refs/tags/0.5.0
+      - name: Create or update release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view 0.5.0 >/dev/null 2>&1; then
+            gh release edit 0.5.0 --title 'comrakk 0.5.0' --notes "Built from commit $GITHUB_SHA."
+          else
+            gh release create 0.5.0 --verify-tag --title 'comrakk 0.5.0' --notes "Built from commit $GITHUB_SHA."
+          fi
+          gh release upload 0.5.0 release-assets/* --clobber

@@ -1,0 +1,6 @@
+#content .diagram, .diagram-view { --pele-font: var(--md-font-sans); --pele-bg: var(--md-bg); --pele-fg: var(--md-fg); --pele-muted: var(--md-muted); --pele-line: var(--md-muted); --pele-border: var(--md-border); --pele-surface: var(--md-canvas); --pele-surface-alt: var(--md-bg); --pele-accent: var(--md-accent); }
+#content .diagram { margin: 1.5rem 0; overflow-x: auto; }
+:is(#content .diagram, .diagram-view) svg { display: block; max-width: 100%; height: auto; margin: auto; font-family: var(--md-font-sans) !important; font-size: 12px !important; }
+:is(#content .diagram, .diagram-view) svg text { font-family: var(--md-font-sans) !important; font-size: 12px !important; }
+#content .graph-figure .diagram { margin: 0; }
+#content .graph-figure .diagram svg { width: 100%; }
