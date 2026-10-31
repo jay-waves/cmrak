@@ -35,7 +35,7 @@ fn main() -> std::process::ExitCode {
                 .is_some_and(|arg| arg == "--help" || arg == "-h") =>
         {
             println!(
-                "Usage: comrakk serve INPUT [--root DIR]\n       comrakk serve [--site-root DIR] [--port PORT]"
+                "Usage: comrakk serve INPUT [--root DIR] [--fragment FRAGMENT]\n       comrakk serve [--site-root DIR] [--port PORT]"
             );
             Some(Ok(()))
         }

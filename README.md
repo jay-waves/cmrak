@@ -56,14 +56,14 @@ comrakk compile note.md output.html --standalone
 原生站点预览无需 Node.js：
 
 ```sh
-comrakk serve note.md --root .
+comrakk serve note.md --root . --fragment section
 comrakk stop
 comrakk serve --site-root _site --port 8765
 ```
 
 `serve INPUT` 将文档编译到系统临时目录 `lib-comrak-preview`，输出预览 URL，并启动或复用 `127.0.0.1:8765` 上的后台服务。同一项目的多个进程共享站点和静态资源；相同文件的编译通过文件锁串行化。页面在生成的 HTML 内容变化时自动刷新，服务保留在后台直到执行 `stop`。端口已被其他服务占用时会报错。`serve` 前台托管 `--site-root` 指定的已有目录（`--dir` 也可使用），按 Ctrl+C 退出；不要与共享预览服务同时占用同一端口。
 
-`serve INPUT` 负责选择站点输出路径，不接受输出路径、`--site-root` 或 `--standalone`。每次由编辑器主动调用 `serve INPUT` 重新编译，页面随后自动刷新。
+`serve INPUT` 负责选择站点输出路径，不接受输出路径、`--site-root` 或 `--standalone`。每次由编辑器主动调用 `serve INPUT` 重新编译，页面随后自动刷新。可选的 `--fragment` 接受 URL fragment（可带 `#`）；编译成功后，打开对应页面的浏览器会通过 SSE 更新 fragment 并刷新。编译失败不会发送通知。
 
 图表 ID 根据声明及相同声明的出现次序生成，不随普通正文的增删而改变；JS 或 Mermaid 文件内容变化会重新渲染图表。多个完全相同的声明依靠出现次序区分，插入或删除其中一个时，其后的相同声明可能获得不同 ID。
 
