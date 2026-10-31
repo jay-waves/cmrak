@@ -6,7 +6,6 @@ use std::{
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
     time::{Duration, Instant},
 };
 
@@ -69,22 +68,23 @@ fn ensure_server(root: &Path) -> Result<(), String> {
         return Ok(());
     }
     if TcpStream::connect_timeout(&ADDRESS.parse().unwrap(), Duration::from_millis(200)).is_err() {
-        let mut child = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
-        child
-            .arg("__site_preview_server")
-            .arg(root)
-            .arg("8765")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        #[cfg(windows)]
+        #[cfg(not(windows))]
         {
-            use std::os::windows::process::CommandExt;
-            child.creation_flags(0x00000208);
+            use std::process::{Command, Stdio};
+            let mut child = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
+            child
+                .arg("__site_preview_server")
+                .arg(root)
+                .arg("8765")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            child
+                .spawn()
+                .map_err(|e| format!("cannot start preview server: {e}"))?;
         }
-        child
-            .spawn()
-            .map_err(|e| format!("cannot start preview server: {e}"))?;
+        #[cfg(windows)]
+        spawn_windows_server(root)?;
     }
     let deadline = Instant::now() + Duration::from_secs(5);
     while Instant::now() < deadline {
@@ -96,6 +96,90 @@ fn ensure_server(root: &Path) -> Result<(), String> {
     Err(format!(
         "preview service unavailable or {ADDRESS} belongs to another service"
     ))
+}
+
+#[cfg(windows)]
+fn spawn_windows_server(root: &Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::{
+        Foundation::CloseHandle,
+        System::Threading::{
+            CREATE_NEW_PROCESS_GROUP, CreateProcessW, DETACHED_PROCESS, PROCESS_INFORMATION,
+            STARTUPINFOW,
+        },
+    };
+
+    // Quote an argument according to the Windows command-line parsing rules.
+    fn quote(value: &std::ffi::OsStr, output: &mut Vec<u16>) {
+        output.push(b'"' as u16);
+        let mut slashes = 0;
+        for c in value.encode_wide() {
+            if c == b'\\' as u16 {
+                slashes += 1;
+            } else {
+                let count = if c == b'"' as u16 {
+                    slashes * 2 + 1
+                } else {
+                    slashes
+                };
+                output.extend(std::iter::repeat_n(b'\\' as u16, count));
+                output.push(c);
+                slashes = 0;
+            }
+        }
+        output.extend(std::iter::repeat_n(b'\\' as u16, slashes * 2));
+        output.push(b'"' as u16);
+    }
+
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let mut command = Vec::new();
+    for arg in [
+        exe.as_os_str(),
+        std::ffi::OsStr::new("__site_preview_server"),
+        root.as_os_str(),
+        std::ffi::OsStr::new("8765"),
+    ] {
+        if !command.is_empty() {
+            command.push(b' ' as u16);
+        }
+        quote(arg, &mut command);
+    }
+    command.push(0);
+    let application: Vec<u16> = exe
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut startup: STARTUPINFOW = unsafe { std::mem::zeroed() };
+    startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+    let mut process: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+    // Disabling handle inheritance is essential: callers may have inheritable
+    // pipe handles other than the three standard handles.
+    let result = unsafe {
+        CreateProcessW(
+            application.as_ptr(),
+            command.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+            std::ptr::null(),
+            std::ptr::null(),
+            &startup,
+            &mut process,
+        )
+    };
+    if result == 0 {
+        return Err(format!(
+            "cannot start preview server: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    unsafe {
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+    }
+    Ok(())
 }
 
 /// Compile to the shared preview site and print a reusable URL.
