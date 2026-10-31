@@ -154,9 +154,10 @@ pub fn stylesheet_for_math(
         escape(file_url(&absolute)?.as_str())
     );
     if math {
+        let katex = dunce::canonicalize(directory.join("katex.css")).map_err(|e| e.to_string())?;
         links.push_str(&format!(
             "<link rel=\"stylesheet\" href=\"{}\">",
-            escape(file_url(&directory.join("katex.css"))?.as_str())
+            escape(file_url(&katex)?.as_str())
         ));
     }
     Ok(links)

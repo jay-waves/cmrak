@@ -81,6 +81,35 @@ pub(crate) fn rewrite(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    #[test]
+    fn site_compiles_math_when_output_directory_uses_a_symlink() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("root");
+        let actual_site = temp.path().join("actual-site");
+        let linked_site = temp.path().join("linked-site");
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&actual_site).unwrap();
+        std::os::unix::fs::symlink(&actual_site, &linked_site).unwrap();
+        let input = root.join("test.md");
+        fs::write(&input, "$x$").unwrap();
+        let args = crate::cli::parse([
+            "compile".to_owned(),
+            input.to_str().unwrap().into(),
+            "--root".into(),
+            root.to_str().unwrap().into(),
+            "--site-root".into(),
+            linked_site.to_str().unwrap().into(),
+        ])
+        .unwrap()
+        .unwrap();
+        crate::document::compile(&args).unwrap();
+        let html = fs::read_to_string(&args.output).unwrap();
+        assert!(html.contains("katex.css"));
+        assert!(html.contains("class=\"katex"));
+        assert!(!html.contains("file://"));
+    }
+
     #[test]
     fn site_rebases_links_and_resources_from_the_source_directory() {
         let temp = tempfile::tempdir().unwrap();
