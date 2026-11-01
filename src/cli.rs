@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-pub const HELP: &str = "comrakk — compile Markdown or source code to static HTML
+pub const HELP: &str = "cmrak — compile Markdown or source code to static HTML
 
-Usage: comrakk <compile> [OPTIONS] <INPUT> [OUTPUT]\n       comrakk serve [INPUT --root DIR] [--site-root DIR] [--port PORT]\n       comrakk stop
+Usage: cmrak <compile> [OPTIONS] <INPUT> [OUTPUT]\n       cmrak serve [INPUT --root DIR] [--site-root DIR] [--port PORT]\n       cmrak stop
 
 Options:
   -o, --output <PATH>                 Output HTML (default: input with .html)
@@ -15,7 +15,7 @@ Options:
   -h, --help                         Show help
   -V, --version                      Show version
 
-Site resources are versioned under <site-root>/_shared/lib-comrak. Existing matching files are reused.
+Site resources are versioned under <site-root>/_shared/cmrak. Existing matching files are reused.
 Remote image URLs are preserved in all modes and loaded by the browser.
 Recognized source files (C/C++, BibTeX, Python, Lua, shell, JS/TS, Rust, etc.)
 are highlighted with highlight.js using the current code theme and fonts.
@@ -74,7 +74,7 @@ pub fn parse(values: impl IntoIterator<Item = String>) -> Result<Option<Args>, S
                 return Ok(None);
             }
             "-V" | "--version" => {
-                println!("comrakk {}", env!("CARGO_PKG_VERSION"));
+                println!("cmrak {}", env!("CARGO_PKG_VERSION"));
                 return Ok(None);
             }
             "-o" | "--output" => output = Some(PathBuf::from(argument()?)),

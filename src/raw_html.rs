@@ -1,7 +1,8 @@
 //! Rewrite resource attributes without serializing or otherwise changing raw HTML.
 use crate::{assets::escape, document::Attachments};
 
-pub fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> {
+#[cfg(test)]
+fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> {
     let mut warnings = Vec::new();
     let rewritten = rewrite_with_warnings(html, attachments, &mut warnings, &mut |_| Ok(None))?;
     if let Some((_, message)) = warnings.into_iter().next() {
@@ -10,11 +11,31 @@ pub fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> 
     Ok(rewritten)
 }
 
-pub fn rewrite_with_warnings(
+#[cfg(test)]
+fn rewrite_with_warnings(
     html: &str,
     attachments: &Attachments,
     warnings: &mut Vec<(usize, String)>,
     code_link: &mut dyn FnMut(&str) -> Result<Option<String>, String>,
+) -> Result<String, String> {
+    rewrite_impl(html, attachments, warnings, code_link, false)
+}
+
+pub(crate) fn rewrite_without_scripts(
+    html: &str,
+    attachments: &Attachments,
+    warnings: &mut Vec<(usize, String)>,
+    code_link: &mut dyn FnMut(&str) -> Result<Option<String>, String>,
+) -> Result<String, String> {
+    rewrite_impl(html, attachments, warnings, code_link, true)
+}
+
+fn rewrite_impl(
+    html: &str,
+    attachments: &Attachments,
+    warnings: &mut Vec<(usize, String)>,
+    code_link: &mut dyn FnMut(&str) -> Result<Option<String>, String>,
+    remove_scripts: bool,
 ) -> Result<String, String> {
     let bytes = html.as_bytes();
     let mut result = String::with_capacity(html.len());
@@ -40,6 +61,40 @@ pub fn rewrite_with_warnings(
             continue;
         }
         let tag = html[start + 1..at].to_ascii_lowercase();
+        if remove_scripts
+            && tag == "script"
+            && bytes
+                .get(at)
+                .is_none_or(|b| b.is_ascii_whitespace() || matches!(b, b'>' | b'/'))
+        {
+            let Some(open_end) = html[at..].find('>').map(|end| at + end + 1) else {
+                return Ok(result);
+            };
+            if bytes[start..open_end - 1]
+                .iter()
+                .rev()
+                .find(|b| !b.is_ascii_whitespace())
+                == Some(&b'/')
+            {
+                cursor = open_end;
+                continue;
+            }
+            let Some(close_start) = bytes[open_end..]
+                .windows(8)
+                .position(|window| window.eq_ignore_ascii_case(b"</script"))
+                .map(|offset| open_end + offset)
+            else {
+                return Ok(result);
+            };
+            let Some(close_end) = html[close_start..]
+                .find('>')
+                .map(|end| close_start + end + 1)
+            else {
+                return Ok(result);
+            };
+            cursor = close_end;
+            continue;
+        }
         result.push_str(&html[start..at]);
         let mut unchanged = at;
         while at < bytes.len() {
@@ -213,6 +268,36 @@ mod tests {
     use super::*;
     use crate::cli::Images;
     use std::fs;
+
+    #[test]
+    fn script_removal_and_resource_rewrite_share_original_offsets() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(temp.path()).unwrap();
+        fs::write(root.join("image.png"), b"image").unwrap();
+        let attachments = Attachments::new(
+            &root.join("note.md"),
+            &root.join("note.html"),
+            root.clone(),
+            Images::Reference,
+            false,
+        )
+        .unwrap();
+        let input = "<SCRIPT>\n<img src='missing.png'>\n</SCRIPT>\n<img src='image.png'><a href='file:///missing.pdf'>link</a><script-custom>kept</script-custom>";
+        let mut warnings = Vec::new();
+        let output =
+            rewrite_without_scripts(input, &attachments, &mut warnings, &mut |_| Ok(None)).unwrap();
+        assert!(!output.contains("missing.png"));
+        assert!(
+            output.contains(&escape(
+                crate::assets::file_url(&root.join("image.png"))
+                    .unwrap()
+                    .as_str()
+            ))
+        );
+        assert!(output.contains("<script-custom>kept</script-custom>"));
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].0, input.find("<a ").unwrap());
+    }
 
     #[test]
     fn html_resources_resolve_against_source_and_respect_root() {

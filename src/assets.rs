@@ -49,7 +49,7 @@ pub fn shared_base() -> Result<PathBuf, String> {
 
 fn application_assets(base: Option<PathBuf>) -> Result<PathBuf, String> {
     base.filter(|path| path.is_absolute())
-        .map(|base| base.join("lib.comrak").join("assets"))
+        .map(|base| base.join("cmrak").join("assets"))
         .ok_or_else(|| {
             "cannot locate an absolute user resource directory; pass --asset-dir or --standalone"
                 .into()
@@ -281,7 +281,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         assert_eq!(
             application_assets(Some(temp.path().to_owned())).unwrap(),
-            temp.path().join("lib.comrak/assets")
+            temp.path().join("cmrak/assets")
         );
     }
 
@@ -290,10 +290,7 @@ mod tests {
     fn windows_defaults_to_the_current_users_known_folder() {
         let local = windows_local_app_data().unwrap();
         assert!(local.is_absolute());
-        assert_eq!(
-            shared_base().unwrap(),
-            local.join("lib.comrak").join("assets")
-        );
+        assert_eq!(shared_base().unwrap(), local.join("cmrak").join("assets"));
         // A drive-relative path must never turn a default cache into a write
         // relative to whichever directory happens to be active on that drive.
         assert!(application_assets(Some(PathBuf::from(r"C:cache"))).is_err());
@@ -304,9 +301,9 @@ mod tests {
     #[test]
     fn windows_file_urls_preserve_unicode_and_support_redirected_paths() {
         for path in [
-            r"C:\Users\张 三\AppData\Local\lib.comrak\assets\v1\style.css",
-            r"\\?\C:\Users\张 三\AppData\Local\lib.comrak\assets\v1\style.css",
-            r"\\server\profiles\张 三\Local\lib.comrak\assets\v1\style.css",
+            r"C:\Users\张 三\AppData\Local\cmrak\assets\v1\style.css",
+            r"\\?\C:\Users\张 三\AppData\Local\cmrak\assets\v1\style.css",
+            r"\\server\profiles\张 三\Local\cmrak\assets\v1\style.css",
         ] {
             let url = file_url(Path::new(path)).unwrap();
             assert_eq!(url.scheme(), "file");
@@ -315,7 +312,7 @@ mod tests {
             assert!(
                 url.to_file_path()
                     .unwrap()
-                    .ends_with(r"lib.comrak\assets\v1\style.css")
+                    .ends_with(r"cmrak\assets\v1\style.css")
             );
         }
     }

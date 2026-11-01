@@ -33,3 +33,9 @@ body { margin: 0; background: var(--md-bg); }
 #content .graph-figure .diagram { margin: 0; }
 #content .graph-figure .diagram svg { width: 100%; }
 #content .graph-figure .viz { width: 100%; margin: 0; }
+/* Numbered summaries are the no-script fallback. With JS, use only inline references. */
+#content details.inline-footnote > summary { cursor: pointer; }
+#content details.inline-footnote:not([open]) > .note-content { display: none; }
+
+#content.footnotes-interactive details.inline-footnote:not([open]) { display: none; }
+#content.footnotes-interactive details.inline-footnote > summary { display: none; }

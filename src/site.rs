@@ -303,13 +303,13 @@ mod tests {
         assert_eq!(args.output, site.join("ai/chatgpt/note.md/index.html"));
         assert!(html.contains("../../../assets/example.webp"));
         assert!(html.contains("../next.md/index.html#part"));
-        assert!(html.contains("../../../_shared/lib-comrak/"));
+        assert!(html.contains("../../../_shared/cmrak/"));
         assert!(!html.contains("file:"));
         assert_eq!(
             fs::read(site.join("assets/example.webp")).unwrap(),
             b"image"
         );
-        let shared = fs::read_dir(site.join("_shared/lib-comrak"))
+        let shared = fs::read_dir(site.join("_shared/cmrak"))
             .unwrap()
             .next()
             .unwrap()

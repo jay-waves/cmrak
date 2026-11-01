@@ -1,30 +1,30 @@
-name: Set up comrakk
-description: Download comrakk and add the Markdown compiler to PATH.
+name: Set up cmrak
+description: Download cmrak and add the Markdown compiler to PATH.
 runs:
   using: composite
   steps:
-    - name: Download and install comrakk
+    - name: Download and install cmrak
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
-        COMRAKK_REPOSITORY: ${{ github.action_repository || github.repository }}
+        CMRAK_REPOSITORY: ${{ github.action_repository || github.repository }}
       run: |
         if ($env:RUNNER_ARCH -ne 'X64') {
-          throw "comrakk release 0.5.0 supports x64 runners only; found $env:RUNNER_ARCH"
+          throw "cmrak release 0.5.0 supports x64 runners only; found $env:RUNNER_ARCH"
         }
         switch ($env:RUNNER_OS) {
-          'Linux' { $asset = 'comrakk-linux-x64'; $binary = 'comrakk' }
-          'Windows' { $asset = 'comrakk-windows-x64.exe'; $binary = 'comrakk.exe' }
-          default { throw "comrakk release 0.5.0 does not support $env:RUNNER_OS" }
+          'Linux' { $asset = 'cmrak-linux-x64'; $binary = 'cmrak' }
+          'Windows' { $asset = 'cmrak-windows-x64.exe'; $binary = 'cmrak.exe' }
+          default { throw "cmrak release 0.5.0 does not support $env:RUNNER_OS" }
         }
-        $directory = Join-Path $env:RUNNER_TEMP 'comrak2-bin'
+        $directory = Join-Path $env:RUNNER_TEMP 'cmrak-bin'
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
-        gh release download 0.5.0 --repo $env:COMRAKK_REPOSITORY --pattern $asset --dir $directory --clobber
-        if ($LASTEXITCODE -ne 0) { throw 'Failed to download comrakk 0.5.0' }
+        gh release download 0.5.0 --repo $env:CMRAK_REPOSITORY --pattern $asset --dir $directory --clobber
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to download cmrak 0.5.0' }
         $executable = Join-Path $directory $binary
         Move-Item -Force (Join-Path $directory $asset) $executable
         if ($env:RUNNER_OS -eq 'Linux') {
           chmod +x $executable
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to mark comrakk executable' }
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to mark cmrak executable' }
         }
         $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

@@ -5,7 +5,7 @@ prepareFootnotes(root);
 let generation = 0;
 function navigate() {
   const token = ++generation;
-  if (!/^#[LF][1-9]\d*$/.test(location.hash)) return;
+  if (!/^#(?:L[1-9]\d*|F[1-9]\d*(?:-[1-9]\d*)?)$/.test(location.hash)) return;
   const scroll = () => {
     if (token !== generation) return;
     const target = fragmentTarget(root, location.hash);

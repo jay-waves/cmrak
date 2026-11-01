@@ -1,15 +1,4 @@
-use comrak::{
-    adapters::{HeadingAdapter, HeadingMeta},
-    nodes::Sourcepos,
-};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    sync::Mutex,
-};
-
-#[derive(Default)]
-pub(super) struct HeadingIds(Mutex<IdState>);
+use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
 pub(super) struct IdState {
@@ -34,29 +23,6 @@ impl IdState {
                 return id;
             }
         }
-    }
-}
-
-impl HeadingAdapter for HeadingIds {
-    fn enter(
-        &self,
-        output: &mut dyn fmt::Write,
-        heading: &HeadingMeta,
-        sourcepos: Option<Sourcepos>,
-    ) -> fmt::Result {
-        let base = slugify(&heading.content);
-        let mut ids = self.0.lock().map_err(|_| fmt::Error)?;
-        let id = ids.next(base);
-        let line = sourcepos.map(|position| position.start.line.max(1));
-        write!(output, "<h{} id=\"{}\"", heading.level, id)?;
-        if let Some(line) = line {
-            write!(output, " data-line=\"{line}\"")?;
-        }
-        output.write_str(">")
-    }
-
-    fn exit(&self, output: &mut dyn fmt::Write, heading: &HeadingMeta) -> fmt::Result {
-        write!(output, "</h{}>", heading.level)
     }
 }
 

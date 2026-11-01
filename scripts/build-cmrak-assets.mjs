@@ -5,11 +5,11 @@ import { mkdir, readFile, writeFile, readdir, cp, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'generated');
-const deps = existsSync(resolve(root, 'node_modules/katex')) ? resolve(root, 'node_modules') : resolve(root, '../node_modules');
+const deps = dirname(dirname(createRequire(import.meta.url).resolve('katex/package.json')));
 await mkdir(resolve(output, 'fonts'), { recursive: true });
 for (const stale of ['d3.css', 'd3-module.js', 'D3-LICENSE']) await rm(resolve(output, stale), { force: true });
 await build({ entryPoints: [resolve(root, 'navigation.mjs')], outfile: resolve(output, 'navigation.js'), bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify: true });
@@ -81,4 +81,4 @@ for (const [name, path] of [
   ['LinkeDOM-LICENSE', 'node_modules/linkedom/LICENSE'],
   ['Pele-LICENSE', 'node_modules/pele/LICENSE'],
 ]) await cp(resolve(deps, path.replace(/^node_modules\//, '')), resolve(output, name));
-console.log(`Prepared comrakk assets: ${output}`);
+console.log(`Prepared cmrak assets: ${output}`);

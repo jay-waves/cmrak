@@ -2,11 +2,12 @@ mod assets;
 pub mod cli;
 pub mod document;
 pub mod engine;
+mod fragments;
 #[path = "headings.rs"]
 mod headings;
-mod markdown;
+mod inline_notes;
+mod markdown_render;
 mod raw_html;
-pub mod source_lines;
 
 pub mod site_preview;
 

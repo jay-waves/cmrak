@@ -10,11 +10,11 @@ use std::{
 };
 
 const ADDRESS: &str = "127.0.0.1:8765";
-const SERVICE: &str = "lib.comrak-preview-v2";
-const RELOAD: &str = r#"<script data-comrak-preview>(()=>{let etag=__ETAG__;const events=new EventSource('/_preview/events?path='+encodeURIComponent(location.pathname)+'&revision='+encodeURIComponent(__REVISION__));events.onmessage=e=>{events.close();const fragment=JSON.parse(e.data);if(fragment!==null)location.hash=fragment;location.reload()};async function check(){try{let r=await fetch(location.href,{method:'HEAD',cache:'no-store'});let next=r.headers.get('etag');if(etag&&next&&etag!==next){location.reload();return}if(next)etag=next}catch{}}check();setInterval(check,750)})();</script>"#;
+const SERVICE: &str = "cmrak-preview-v2";
+const RELOAD: &str = r#"<script data-cmrak-preview>(()=>{let etag=__ETAG__;const events=new EventSource('/_preview/events?path='+encodeURIComponent(location.pathname)+'&revision='+encodeURIComponent(__REVISION__));events.onmessage=e=>{events.close();const fragment=JSON.parse(e.data);if(fragment!==null)location.hash=fragment;location.reload()};async function check(){try{let r=await fetch(location.href,{method:'HEAD',cache:'no-store'});let next=r.headers.get('etag');if(etag&&next&&etag!==next){location.reload();return}if(next)etag=next}catch{}}check();setInterval(check,750)})();</script>"#;
 
 fn shared_root() -> PathBuf {
-    std::env::temp_dir().join("lib-comrak-preview")
+    std::env::temp_dir().join("cmrak-preview")
 }
 
 fn hash(value: &[u8]) -> String {

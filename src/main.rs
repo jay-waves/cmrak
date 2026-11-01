@@ -1,4 +1,4 @@
-use lib_comrak::{cli, document};
+use cmrak::{cli, document};
 
 fn is_source_diagnostic(message: &str) -> bool {
     regex::Regex::new(r"^.+:[0-9]+:[0-9]+: (?:error|warning):")
@@ -18,15 +18,15 @@ fn main() -> std::process::ExitCode {
                     .skip(1)
                     .any(|arg| arg == "--root" || arg.starts_with("--root=")) =>
         {
-            Some(lib_comrak::site_preview::compile(arguments[1..].to_vec()))
+            Some(cmrak::site_preview::compile(arguments[1..].to_vec()))
         }
-        Some("stop") if arguments.len() == 1 => Some(lib_comrak::site_preview::stop()),
+        Some("stop") if arguments.len() == 1 => Some(cmrak::site_preview::stop()),
         Some("__site_preview_server") if arguments.len() == 3 => Some(
             arguments[2]
                 .parse::<u16>()
                 .map_err(|e| e.to_string())
                 .and_then(|port| {
-                    lib_comrak::site_preview::serve(std::path::Path::new(&arguments[1]), port)
+                    cmrak::site_preview::serve(std::path::Path::new(&arguments[1]), port)
                 }),
         ),
         Some("serve")
@@ -35,7 +35,7 @@ fn main() -> std::process::ExitCode {
                 .is_some_and(|arg| arg == "--help" || arg == "-h") =>
         {
             println!(
-                "Usage: comrakk serve INPUT [--root DIR] [--fragment FRAGMENT]\n       comrakk serve [--site-root DIR] [--port PORT]"
+                "Usage: cmrak serve INPUT [--root DIR] [--fragment FRAGMENT]\n       cmrak serve [--site-root DIR] [--port PORT]"
             );
             Some(Ok(()))
         }
@@ -65,7 +65,7 @@ fn main() -> std::process::ExitCode {
             Some(if let Some(error) = error {
                 Err(error)
             } else {
-                lib_comrak::site_preview::serve(&dir, port)
+                cmrak::site_preview::serve(&dir, port)
             })
         }
         _ => None,

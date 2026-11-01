@@ -6,7 +6,7 @@ fn main() {
     let generated = root.join("generated");
     assert!(
         generated.join("render.js").exists(),
-        "Run `npm run build:comrak-assets` before building lib-comrak"
+        "Run `npm run build:cmrak-assets` before building cmrak"
     );
     let mut assets = Vec::new();
     for directory in [generated.clone(), generated.join("fonts")] {

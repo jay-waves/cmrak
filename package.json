@@ -1,11 +1,11 @@
 {
-  "name": "comrak2",
+  "name": "cmrak",
   "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:comrak-assets": "node scripts/build-comrak-assets.mjs",
-    "package:comrak": "node scripts/package-comrak.mjs"
+    "build:cmrak-assets": "node scripts/build-cmrak-assets.mjs",
+    "package:cmrak": "node scripts/package-cmrak.mjs"
   },
   "dependencies": {
     "chartist": "2.2.0",
