@@ -52,8 +52,11 @@ pub(crate) fn render_code_block(
             let source = fs::read_to_string(&path)
                 .map_err(|e| format!("cannot read viz {reference:?}: {e}"))?;
             let (html, interactive) = engine.viz(&source, index)?;
-            let module =
-                interactive.then(|| assets::data_url(source.as_bytes(), "text/javascript"));
+            let module = if interactive {
+                Some(attachments.chart_module(&source)?)
+            } else {
+                None
+            };
             let metadata = if preview {
                 module
                     .as_ref()

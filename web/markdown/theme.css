@@ -20,7 +20,7 @@
 :root {
   --md-font-serif: Georgia, "Lib Source Han Serif", "Source Han Serif SC", "Source Han Serif CN VF", "Source Han Serif", "Source Han Serif CN", "Noto Serif CJK SC", "Songti SC", "SimSun", "Libertinus Serif", "New Computer Modern", "Times New Roman", serif;
   --md-font-sans: "Source Han Sans CN VF", "Source Han Sans", "Source Han Sans CN", "Source Han Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --md-font-mono: "Monaspace Neon", ui-monospace, SFMono-Regular, Menlo, Consolas, "Source Han Sans CN VF", "Source Han Sans", "Source Han Sans CN", "Source Han Sans SC", monospace;
+  --md-font-mono: "Monaspace Neon", Consolas, Menlo, SFMono-Regular, "Source Han Sans CN VF", "Source Han Sans", "Source Han Sans CN", "Source Han Sans SC", ui-monospace, monospace;
   --md-code-font-size: 13px;
   --md-code-line-height: 1.45;
   --md-font: var(--md-font-serif);

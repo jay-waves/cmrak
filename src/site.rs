@@ -97,6 +97,40 @@ mod tests {
     use super::*;
 
     #[test]
+    fn site_reuses_external_navigation_and_interactive_chart_modules() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let site = root.join("site");
+        fs::write(root.join("chart.js"), "export default c => { c.innerHTML = '<svg></svg>' }; export function hydrate(c) { c.dataset.ready = '1' }").unwrap();
+        for name in ["a.md", "b.md"] {
+            fs::write(root.join(name), "<chartist src=\"chart.js\"></chartist>\n").unwrap();
+            let args = crate::cli::parse([
+                root.join(name).to_string_lossy().to_string(),
+                "--root".into(),
+                root.to_string_lossy().to_string(),
+                "--site-root".into(),
+                site.to_string_lossy().to_string(),
+            ])
+            .unwrap()
+            .unwrap();
+            crate::document::compile(&args).unwrap();
+            let output = fs::read_to_string(site.join(name).join("index.html")).unwrap();
+            assert!(output.contains("/navigation.js\""), "{output}");
+            assert!(output.contains("/chartist-module.js\""), "{output}");
+            assert!(output.contains("/chartist-server-module.js\""), "{output}");
+            assert!(output.contains("/charts/"), "{output}");
+            assert!(!output.contains("data:text/javascript;base64,"));
+            assert!(!output.contains("file:///"));
+        }
+        assert_eq!(
+            fs::read_dir(site.join("_shared/cmrak/charts"))
+                .unwrap()
+                .count(),
+            1
+        );
+    }
+
+    #[test]
     fn page_paths_keep_complete_names_to_avoid_collisions() {
         assert_eq!(
             page_path(Path::new("_site/example.md")),

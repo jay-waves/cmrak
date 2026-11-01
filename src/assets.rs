@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/assets.rs"));
 const VERSION: &str = include_str!("../generated/version.txt");
 const KATEX: &str = include_str!("../generated/katex.css");
 const STYLE: &str = include_str!("../generated/style.css");
+const MONASPACE_CDN: &str = "https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.400/fonts/Web%20Fonts/Variable%20Web%20Fonts/Monaspace%20Neon/Monaspace%20Neon%20Var.woff";
 
 pub fn escape(value: &str) -> String {
     value
@@ -112,11 +113,14 @@ pub fn stylesheet_for_math(
     math: bool,
 ) -> Result<String, String> {
     if standalone {
-        let mut css = STYLE.to_owned();
+        let mut css = STYLE.replace("fonts/MonaspaceNeonVar.woff", MONASPACE_CDN);
         if math {
             css.push_str(KATEX);
         }
         for (name, bytes) in ASSETS.iter().filter(|(name, _)| name.starts_with("fonts/")) {
+            if !math || *name == "fonts/MonaspaceNeonVar.woff" {
+                continue;
+            }
             let mime = if name.ends_with(".otf") {
                 "font/otf"
             } else if name.ends_with(".woff") {
@@ -201,7 +205,11 @@ pub fn mermaid_stylesheet(standalone: bool, directory: Option<&Path>) -> Result<
     ))
 }
 
-pub fn viz_runtime(standalone: bool, directory: Option<&Path>) -> Result<String, String> {
+pub fn viz_runtime(
+    standalone: bool,
+    directory: Option<&Path>,
+    site: bool,
+) -> Result<String, String> {
     let source = if standalone {
         data_url(include_bytes!("../generated/viz.js"), "text/javascript")
     } else {
@@ -214,14 +222,28 @@ pub fn viz_runtime(standalone: bool, directory: Option<&Path>) -> Result<String,
         )?
         .to_string()
     };
-    let module = data_url(
+    let module_url = |name: &str, bytes: &[u8]| -> Result<String, String> {
+        if !site {
+            Ok(data_url(bytes, "text/javascript"))
+        } else {
+            let directory = directory
+                .map(Path::to_path_buf)
+                .map_or_else(shared_base, Ok)?;
+            Ok(file_url(
+                &dunce::canonicalize(directory.join(VERSION.trim()).join(name))
+                    .map_err(|e| e.to_string())?,
+            )?
+            .to_string())
+        }
+    };
+    let module = module_url(
+        "chartist-module.js",
         include_bytes!("../generated/chartist-module.js"),
-        "text/javascript",
-    );
-    let server = data_url(
+    )?;
+    let server = module_url(
+        "chartist-server-module.js",
         include_bytes!("../generated/chartist-server-module.js"),
-        "text/javascript",
-    );
+    )?;
     Ok(format!(
         "<script src=\"{}\"></script><script type=\"importmap\">{{\"imports\":{{\"chartist\":\"{module}\",\"chartist/server\":\"{server}\"}}}}</script>",
         escape(&source)
@@ -332,7 +354,7 @@ mod tests {
             css.matches("data:font/woff2;base64,").count()
                 + css.matches("data:font/otf;base64,").count()
                 + css.matches("data:font/woff;base64,").count(),
-            fonts
+            fonts - 1
         );
         assert_eq!(css.matches("data:font/otf;base64,").count(), 0);
         assert!(!css.contains("url(fonts/"));
@@ -341,7 +363,8 @@ mod tests {
     #[test]
     fn pages_without_math_omit_katex_fonts() {
         let css = stylesheet_for_math(true, None, false).unwrap();
-        assert!(css.contains("data:font/woff;base64,"));
+        assert!(css.contains(MONASPACE_CDN));
+        assert!(!css.contains("data:font/woff;base64,"));
         assert!(!css.contains("data:font/woff2;base64,"));
         let temp = tempfile::tempdir().unwrap();
         let links = stylesheet_for_math(false, Some(temp.path()), false).unwrap();

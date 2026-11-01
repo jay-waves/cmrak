@@ -90,7 +90,7 @@ cmrak serve init.lua --root .
 
 ## 输出模式
 
-默认 standalone：内嵌基础 CSS、Monaspace Neon 可变 WOFF 代码字体、本地图片，以及当前页面需要的公式字体、图表资源。代码字号为 13px。无公式页面不附带 KaTeX 样式和字体。远程图片保留 URL，由浏览器加载。
+默认 standalone：内嵌基础 CSS、本地图片，以及当前页面需要的公式字体、图表资源。Monaspace Neon 代码字体固定从 jsDelivr 加载；断网或 CDN 不可用时回退到本机 Consolas、Menlo 或系统等宽字体。代码字号为 13px。无公式页面不附带 KaTeX 样式和字体。远程图片保留 URL，由浏览器加载。
 
 显式传入 `--site-root _site` 启用站点模式：
 
@@ -100,7 +100,7 @@ cmrak compile ai/chatgpt/note.md --site-root _site
 
 笔记库根目录默认当前工作目录，可通过 `--root DIR` 指定。示例输出 `_site/ai/chatgpt/note.md/index.html`，本地附件按笔记库目录结构复制，页面生成相对 URL。`/assets/example.webp` 表示笔记库根目录下的资源，生成 `../../../assets/example.webp`。Markdown 链接改为对应的 `文件名/index.html` 链接，但不会递归编译其他笔记。
 
-共享资源位于 `_site/_shared/cmrak/<内容版本>/`；内容一致时复用，缺失或损坏时修复，不删除其他文件。`--site-root` 决定输出位置，不与 OUTPUT、`--output` 或 `--standalone` 混用。站点图片默认复制引用，可显式 `--images embed`。
+共享资源位于 `_site/_shared/cmrak/<内容版本>/`；内容一致时复用，缺失或损坏时修复，不删除其他文件。 站点导航脚本、Chartist 运行时与交互模块均使用共享文件；交互模块按内容寻址。内置预览服务为内容寻址的共享资源设置长期缓存，普通文件使用 ETag 重新验证。其他静态服务器需自行配置相应缓存头。`--site-root` 决定输出位置，不与 OUTPUT、`--output` 或 `--standalone` 混用。站点图片默认复制引用，可显式 `--images embed`。
 
 站点模式下，指向支持高亮的本地代码文件的普通链接会自动编译目标，并指向 `完整文件名/index.html`；query 和 fragment 保留。重复引用按规范化路径复用，缺失、越界或编译失败会在引用位置报错。代码内容只按文本高亮。单独编译与链接触发的编译共用文件锁；standalone 模式保留原有链接行为。
 

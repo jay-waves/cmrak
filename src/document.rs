@@ -106,6 +106,27 @@ impl Attachments {
         }
     }
 
+    pub(crate) fn chart_module(&self, source: &str) -> Result<String, String> {
+        use sha2::{Digest, Sha256};
+        let Some(site) = &self.site_root else {
+            return Ok(assets::data_url(source.as_bytes(), "text/javascript"));
+        };
+        let mut directory = site.clone();
+        for component in ["_shared", "cmrak", "charts"] {
+            directory.push(component);
+            fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+            directory = dunce::canonicalize(directory).map_err(|e| e.to_string())?;
+            if !directory.starts_with(site) {
+                return Err("chart assets directory is outside site root".into());
+            }
+        }
+        let path = directory.join(format!("{:x}.mjs", Sha256::digest(source.as_bytes())));
+        if fs::read(&path).ok().as_deref() != Some(source.as_bytes()) {
+            assets::atomic_write(&path, source.as_bytes())?;
+        }
+        Ok(assets::file_url(&dunce::canonicalize(path).map_err(|e| e.to_string())?)?.to_string())
+    }
+
     pub(crate) fn code_link(
         &self,
         original: &str,
@@ -440,7 +461,7 @@ pub(crate) fn compile_document(
         String::new()
     };
     let viz_runtime = if body.contains("<script type=\"module\">") {
-        assets::viz_runtime(args.standalone, asset_dir).map_err(failure)?
+        assets::viz_runtime(args.standalone, asset_dir, site_assets.is_some()).map_err(failure)?
     } else {
         String::new()
     };
@@ -455,8 +476,24 @@ pub(crate) fn compile_document(
         env!("CARGO_PKG_VERSION"),
         escape(title)
     );
-    let navigation = include_str!("../generated/navigation.js");
-    let html = html.replace("</body>", &format!("<script>{navigation}</script></body>"));
+    let navigation = if let Some(directory) = site_assets.as_deref() {
+        let path = dunce::canonicalize(
+            directory
+                .join(include_str!("../generated/version.txt").trim())
+                .join("navigation.js"),
+        )
+        .map_err(failure)?;
+        format!(
+            "<script src=\"{}\"></script>",
+            escape(assets::file_url(&path).map_err(failure)?.as_str())
+        )
+    } else {
+        format!(
+            "<script>{}</script>",
+            include_str!("../generated/navigation.js")
+        )
+    };
+    let html = html.replace("</body>", &format!("{navigation}</body>"));
     let html = if let Some(site) = &args.site_root {
         crate::site::rewrite(
             &html,

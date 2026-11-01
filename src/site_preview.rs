@@ -337,6 +337,50 @@ fn safe_file(root: &Path, target: &str) -> Option<PathBuf> {
     (file.starts_with(root) && file.is_file()).then_some(file)
 }
 
+// Both tools can serve the same site, so recognize both content-addressed layouts.
+fn cache_policy(root: &Path, file: &Path) -> &'static str {
+    let Ok(relative) = file.strip_prefix(root) else {
+        return "no-cache";
+    };
+    let parts: Vec<_> = relative
+        .components()
+        .filter_map(|part| part.as_os_str().to_str())
+        .collect();
+    let hex = |text: &str, length: usize| {
+        text.len() == length && text.bytes().all(|b| b.is_ascii_hexdigit())
+    };
+    let immutable = parts.windows(4).any(|p| {
+        if p[0] != "_shared" || !matches!(p[1], "cmrak" | "typst") {
+            return false;
+        }
+        if hex(p[2], 16) {
+            return true;
+        }
+        matches!((p[1], p[2]), ("cmrak", "charts") | ("typst", "images"))
+            && p[3]
+                .split_once('.')
+                .is_some_and(|(digest, _)| hex(digest, 64))
+    });
+    if immutable {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    }
+}
+
+fn etag_matches(request: &str, etag: &str) -> bool {
+    request
+        .lines()
+        .skip(1)
+        .filter_map(|line| line.split_once(':'))
+        .filter(|(name, _)| name.eq_ignore_ascii_case("if-none-match"))
+        .flat_map(|(_, value)| value.split(','))
+        .any(|value| {
+            let value = value.trim();
+            value == "*" || value.strip_prefix("W/").unwrap_or(value) == format!("\"{etag}\"")
+        })
+}
+
 fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     stream.set_write_timeout(Some(Duration::from_secs(2)))?;
@@ -439,6 +483,17 @@ fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
     let html = file
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("html") || e.eq_ignore_ascii_case("htm"));
+    let cache = if html {
+        "no-cache"
+    } else {
+        cache_policy(root, &file)
+    };
+    if !html && etag_matches(&request, &etag) {
+        return write!(
+            stream,
+            "HTTP/1.1 304 Not Modified\r\nETag: \"{etag}\"\r\nCache-Control: {cache}\r\nConnection: close\r\n\r\n"
+        );
+    }
     if html {
         let index = body
             .windows(7)
@@ -456,7 +511,7 @@ fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
     let mime = mime_guess::from_path(&file).first_or_octet_stream();
     write!(
         stream,
-        "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nContent-Length: {}\r\nETag: \"{etag}\"\r\nCache-Control: no-cache\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nContent-Length: {}\r\nETag: \"{etag}\"\r\nCache-Control: {cache}\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
         body.len()
     )?;
     if method == "GET" {
@@ -468,6 +523,34 @@ fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cache_only_content_addressed_resources_and_match_etags() {
+        let root = Path::new("/site");
+        for file in [
+            "/site/_shared/cmrak/0123456789abcdef/style.css",
+            "/site/project/_shared/typst/0123456789abcdef/monaspace.woff",
+            "/site/_shared/cmrak/charts/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.mjs",
+            "/site/_shared/typst/images/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.svg",
+        ] {
+            assert!(cache_policy(root, Path::new(file)).contains("immutable"));
+        }
+        for file in [
+            "/site/index.html",
+            "/site/_shared/typst/latest/theme.css",
+            "/site/_shared/cmrak/charts/chart.mjs",
+        ] {
+            assert_eq!(cache_policy(root, Path::new(file)), "no-cache");
+        }
+        assert!(etag_matches(
+            "GET / HTTP/1.1\r\nIf-None-Match: W/\"abc\", \"def\"\r\n",
+            "abc"
+        ));
+        assert!(!etag_matches(
+            "GET / HTTP/1.1\r\nIf-None-Match: \"other\"\r\n",
+            "abc"
+        ));
+    }
+
     #[test]
     fn file_routes_stay_under_root() {
         let dir = tempfile::tempdir().unwrap();
