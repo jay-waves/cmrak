@@ -119,6 +119,8 @@ pub fn stylesheet_for_math(
         for (name, bytes) in ASSETS.iter().filter(|(name, _)| name.starts_with("fonts/")) {
             let mime = if name.ends_with(".otf") {
                 "font/otf"
+            } else if name.ends_with(".woff") {
+                "font/woff"
             } else {
                 "font/woff2"
             };
@@ -325,13 +327,14 @@ mod tests {
             .filter(|(name, _)| name.starts_with("fonts/"))
             .count();
         assert!(fonts > 10);
-        assert_eq!(KATEX.matches("@font-face").count(), fonts);
-        assert!(!STYLE.contains(".woff)"));
+        assert_eq!(KATEX.matches("@font-face").count() + 1, fonts);
+        assert!(STYLE.contains("MonaspaceNeonVar.woff"));
         assert!(!STYLE.contains(".ttf)"));
         let css = stylesheet(true, None).unwrap();
         assert_eq!(
             css.matches("data:font/woff2;base64,").count()
-                + css.matches("data:font/otf;base64,").count(),
+                + css.matches("data:font/otf;base64,").count()
+                + css.matches("data:font/woff;base64,").count(),
             fonts
         );
         assert_eq!(css.matches("data:font/otf;base64,").count(), 0);
@@ -339,11 +342,10 @@ mod tests {
     }
 
     #[test]
-    fn pages_without_math_omit_katex_and_fonts() {
+    fn pages_without_math_omit_katex_fonts() {
         let css = stylesheet_for_math(true, None, false).unwrap();
-        assert!(!css.contains("data:font/"));
-        assert!(!css.contains("@font-face"));
-        assert!(css.len() < 30_000);
+        assert!(css.contains("data:font/woff;base64,"));
+        assert!(!css.contains("data:font/woff2;base64,"));
         let temp = tempfile::tempdir().unwrap();
         let links = stylesheet_for_math(false, Some(temp.path()), false).unwrap();
         assert!(!links.contains("katex.css"));

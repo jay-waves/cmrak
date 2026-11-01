@@ -11,3 +11,4 @@ pub mod source_lines;
 pub mod site_preview;
 
 mod site;
+mod source_code;

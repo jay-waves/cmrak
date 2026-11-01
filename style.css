@@ -1,7 +1,5 @@
 :root {
   color-scheme: light dark;
-  /* Prefer the regular system face on Apple platforms when Iosevka is absent. */
-  --md-font-mono: Menlo, Consolas, "Liberation Mono", ui-monospace, monospace;
 }
 body { margin: 0; background: var(--md-bg); }
 #content { font-family: var(--md-font-serif); width: min(95%, 920px); padding: 0; margin: 32px auto; }

@@ -925,7 +925,7 @@ pub(crate) fn compile_document(
             .ok_or_else(|| failure("output must be a file"))?,
     );
     if output == input || dunce::canonicalize(&output).ok().as_ref() == Some(&input) {
-        return Err(failure("output would overwrite the Markdown input"));
+        return Err(failure("output would overwrite the input"));
     }
     let site_assets = args
         .site_root
@@ -937,8 +937,11 @@ pub(crate) fn compile_document(
     attachments.site = args.site_root.is_some();
     attachments.dependencies = dependencies;
     let mut warnings = Vec::new();
-    let rendered = render_with_warnings(&source, engine, &attachments, &mut warnings);
-    let body = rendered?;
+    let body = if let Some(language) = crate::source_code::language(&input) {
+        crate::source_code::render(&source, language, engine).map_err(failure)?
+    } else {
+        render_with_warnings(&source, engine, &attachments, &mut warnings)?
+    };
     let stylesheet =
         assets::stylesheet_for_math(args.standalone, asset_dir, body.contains("class=\"katex"))
             .map_err(failure)?;
@@ -990,6 +993,75 @@ pub(crate) fn compile_document(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn source_files_compile_with_highlighting_without_markdown_interpretation() {
+        let temp = tempfile::tempdir().unwrap();
+        let cases = [
+            ("sample.c", "c", "int main(void) { return 0; }\n"),
+            ("sample.h", "c", "#define VALUE 42\n"),
+            (
+                "sample.bib",
+                "bibtex",
+                "@article{key, title={Example}, year=2026}\n",
+            ),
+            ("sample.py", "python", "def greet():\n    return True\n"),
+            ("sample.lua", "lua", "local value = true\n"),
+            ("sample.sh", "bash", "#!/bin/bash\necho \"hello\"\n"),
+        ];
+        for (name, language, source) in cases {
+            let input = temp.path().join(name);
+            fs::write(&input, source).unwrap();
+            let args = Args {
+                input,
+                output: temp.path().join(format!("{name}.html")),
+                root: Some(temp.path().to_path_buf()),
+                site_root: None,
+                images: Images::Embed,
+                standalone: true,
+                asset_dir: None,
+                title: Some("Source <example>".into()),
+            };
+            compile(&args).unwrap();
+            let html = fs::read_to_string(&args.output).unwrap();
+            assert!(
+                html.contains(&format!("class=\"hljs language-{language}\"")),
+                "{name}"
+            );
+            assert!(html.contains("<span class=\"hljs-"), "{name}");
+            assert!(html.contains("<main id=\"content\">"));
+            assert!(html.contains("<title>Source &lt;example&gt;</title>"));
+            assert!(html.contains("data-line=\"1\""));
+
+            // These sequences must remain literal source, never Markdown,
+            // attachment references, math, scripts, or executable diagrams.
+            let literal = "# heading\n![image](missing.png)\n$\\invalidcommand$\n```mermaid\ninvalid graph\n```\n<script>alert('x')</script>\n<chartist src=\"missing.js\"></chartist>\n";
+            fs::write(&args.input, literal).unwrap();
+            compile(&args).unwrap();
+            let html = fs::read_to_string(&args.output).unwrap();
+            let body = html
+                .split("<main id=\"content\">\n")
+                .nth(1)
+                .unwrap()
+                .split("</main>")
+                .next()
+                .unwrap();
+            assert!(!body.contains("<script>"));
+            assert!(!body.contains("<img"));
+            assert!(!body.contains("<h1"));
+            assert!(!body.contains("<chartist"));
+            assert!(body.contains("missing.png"));
+            assert!(body.contains("&lt;"));
+
+            fs::write(&args.input, "").unwrap();
+            compile(&args).unwrap();
+            assert!(
+                fs::read_to_string(&args.output)
+                    .unwrap()
+                    .contains("</code></pre>")
+            );
+        }
+    }
 
     #[test]
     fn repeated_compilation_tracks_graph_dependencies_and_refreshes_changed_source() {

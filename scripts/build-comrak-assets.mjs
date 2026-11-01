@@ -33,8 +33,9 @@ await build({
   target: 'es2020', minify: true, legalComments: 'inline',
 });
 let theme = await readFile(resolve(root, 'web/markdown/theme.css'), 'utf8');
-// Use system text and monospace fonts in the standalone compiler.
-theme = theme.replace(/@font-face\s*\{[^}]*font-family:\s*"(?:Iosevka|Lib Source Han Serif)";[^}]*\}/g, '');
+// Use system text fonts and the packaged Monaspace code font.
+theme = theme.replace(/@font-face\s*\{[^}]*font-family:\s*"Lib Source Han Serif";[^}]*\}/g, '');
+theme = '@font-face { font-family: "Monaspace Neon"; src: url("fonts/MonaspaceNeonVar.woff") format("woff"); font-style: normal; font-weight: 200 800; font-display: swap; }\n' + theme;
 let highlight = await readFile(resolve(root, 'web/markdown/highlight.css'), 'utf8');
 highlight = highlight.replace('@scope (.reader, .code-search-results)', '@scope (#content)');
 const css = [theme, highlight,
@@ -43,6 +44,7 @@ const css = [theme, highlight,
 ].join('\n');
 const sourceFonts = (await readdir(resolve(deps, 'katex/dist/fonts')))
   .filter(name => name.endsWith('.woff2'));
+sourceFonts.push('MonaspaceNeonVar.woff');
 // Remove only obsolete generated fonts, leaving source assets untouched.
 for (const name of await readdir(resolve(output, 'fonts'))) {
   if (!sourceFonts.includes(name)) await rm(resolve(output, 'fonts', name), { recursive: true });
@@ -50,6 +52,8 @@ for (const name of await readdir(resolve(output, 'fonts'))) {
 for (const name of sourceFonts) {
   if (name.endsWith('.woff2')) await cp(resolve(deps, 'katex/dist/fonts', name), resolve(output, 'fonts', name));
 }
+await cp(resolve(root, 'fonts/MonaspaceNeonVar.woff'), resolve(output, 'fonts/MonaspaceNeonVar.woff'));
+await cp(resolve(root, 'fonts/LICENSE-Monaspace.txt'), resolve(output, 'Monaspace-LICENSE'));
 // Keep only the preferred format. Every emitted font URL has an embedded asset.
 const katex = await readFile(resolve(deps, 'katex/dist/katex.min.css'), 'utf8');
 const compactKatex = katex.replace(/src:([^;}]+)/g, (declaration, sources) => {

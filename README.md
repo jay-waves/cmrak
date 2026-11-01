@@ -69,13 +69,24 @@ comrakk serve --site-root _site --port 8765
 
 也允许省略 `compile`。默认输出为输入文件同名 `.html`，本地图片内嵌。`--help` 列出所有选项。成功退出码为 0，编译失败为 1，参数错误为 1。支持 `--option=value` 和 `--` 后的文件名。
 
+也支持直接编译 UTF-8 代码文件，按后缀使用 highlight.js 高亮，页面宽度、边距、明暗主题和等宽字体沿用现有 CSS：
+
+```sh
+comrakk compile main.c main.html
+comrakk compile references.bib references.html
+comrakk compile script.py --site-root _site --root .
+comrakk serve init.lua --root .
+```
+
+支持 C/C++（`.c`、`.h`、`.cpp`、`.hpp` 等）、BibTeX、Python、Lua、Shell、JS/TS、Rust、Go、Java、Kotlin、C#、Ruby、PHP、Perl、R、Swift、SQL、JSON、YAML、TOML/INI、XML/HTML/SVG、CSS/SCSS/Less、LaTeX、Typst、PowerShell、CMake、Makefile、Dockerfile、Diff、GraphQL、HTTP 和纯文本 `.txt`。也识别 `Makefile`、`Dockerfile`、`Containerfile`、`CMakeLists.txt` 和常用 Shell 配置文件名。代码作为完整文本显示，其中的 Markdown、公式、HTML 和附件引用均不执行或展开。未识别的后缀仍沿用 Markdown 编译流程。HTML 输入须指定不同输出路径，避免覆盖源文件。
+
 生成的 HTML 与主应用共用块级定位：`output.html#L42` 跳到起始行不超过第 42 行的最近块顶部，空行归入前一块；首块之前及文末之后分别定位首块、末块。每块只标记一个从 1 开始的 `data-line`，标题原有的 `#标题` 锚点保留。HTML 附带小型定位脚本，字体和图片加载后会校正定位；关闭 JavaScript 时仍可使用精确标题锚点。
 
 诊断格式为 `path:line:column: error: message`，行列从 1 开始；数学或图表渲染错误、附件错误定位到对应 Markdown 节点。诊断写 stderr。编译失败不会覆盖已有 HTML。
 
 ## 输出模式
 
-默认 standalone：内嵌基础 CSS、本地图片，以及当前页面需要的公式字体、图表资源。无公式页面不附带 KaTeX 样式和字体。远程图片保留 URL，由浏览器加载。
+默认 standalone：内嵌基础 CSS、Monaspace Neon 可变 WOFF 代码字体、本地图片，以及当前页面需要的公式字体、图表资源。代码字号为 13px。无公式页面不附带 KaTeX 样式和字体。远程图片保留 URL，由浏览器加载。
 
 显式传入 `--site-root _site` 启用站点模式：
 
