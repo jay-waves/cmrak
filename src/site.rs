@@ -18,14 +18,25 @@ pub(crate) fn rewrite(
     let shared = dunce::canonicalize(shared).map_err(|e| e.to_string())?;
     let page = assets::file_url(output)?;
     let pattern = regex::Regex::new(r#"file://[^\s\"'<>]+"#).unwrap();
+    // Code pages are literal source, including any file:// text inside <code>.
+    let code_body = if crate::source_code::language(input).is_some() {
+        html.find("<main id=\"content\">").zip(html.find("</main>"))
+    } else {
+        None
+    };
     let mut error = None;
     let result = pattern.replace_all(html, |captures: &regex::Captures<'_>| {
         let original = &captures[0];
+        if code_body.is_some_and(|(start, end)| {
+            captures.get(0).unwrap().start() >= start && captures.get(0).unwrap().start() < end
+        }) {
+            return original.to_owned();
+        }
         let mapped = (|| -> Result<String, String> {
             let url =
                 url::Url::parse(&original.replace("&amp;", "&")).map_err(|e| e.to_string())?;
             let source = url.to_file_path().map_err(|_| "invalid local URL")?;
-            let destination = if source.starts_with(&shared) {
+            let destination = if source.starts_with(&shared) || source.starts_with(&site) {
                 source.clone()
             } else if source == input {
                 output.to_path_buf()
@@ -55,6 +66,9 @@ pub(crate) fn rewrite(
                 }
             };
             let mut target = assets::file_url(&destination)?;
+            if url.path().ends_with('/') && !target.path().ends_with('/') {
+                target.set_path(&format!("{}/", target.path()));
+            }
             target.set_query(url.query());
             target.set_fragment(url.fragment());
             Ok(assets::escape(
@@ -96,6 +110,105 @@ mod tests {
             page_path(Path::new("example.md")),
             page_path(Path::new("example.py"))
         );
+    }
+
+    #[test]
+    fn code_links_create_pages_and_preserve_urls() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(
+            root.join("src/空 格.c"),
+            "// file:///outside/not-a-resource\nint main(void) { return 0; }\n",
+        )
+        .unwrap();
+        let input = root.join("note.md");
+        fs::write(&input, "[one](src/%E7%A9%BA%20%E6%A0%BC.c?x=1&y=2#part)\n\n[two](/src/%E7%A9%BA%20%E6%A0%BC.c#end)\n\n<a href=\"src/%E7%A9%BA%20%E6%A0%BC.c\">raw</a>\n").unwrap();
+        let site = root.join("_site");
+        let args = crate::cli::parse([
+            "compile".to_owned(),
+            input.to_string_lossy().into(),
+            "--root".into(),
+            root.to_string_lossy().into(),
+            "--site-root".into(),
+            site.to_string_lossy().into(),
+        ])
+        .unwrap()
+        .unwrap();
+        crate::document::compile(&args).unwrap();
+        let html = fs::read_to_string(&args.output).unwrap();
+        assert!(
+            html.contains("../src/%E7%A9%BA%20%E6%A0%BC.c/?x=1&amp;y=2#part"),
+            "{html}"
+        );
+        assert!(html.contains("../src/%E7%A9%BA%20%E6%A0%BC.c/#end"));
+        assert!(html.contains(">raw</a>"));
+        let code = fs::read_to_string(site.join("src/空 格.c/index.html")).unwrap();
+        assert!(code.contains("file:///outside/not-a-resource"));
+        assert!(code.contains("hljs-keyword"));
+        assert!(site.join("src/空 格.c").is_dir());
+    }
+
+    #[test]
+    fn missing_code_link_is_an_error_at_reference() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let input = root.join("note.md");
+        fs::write(&input, "Intro\n\n[missing](src/missing.c)\n").unwrap();
+        let args = crate::cli::parse([
+            "compile".to_owned(),
+            input.to_string_lossy().into(),
+            "--root".into(),
+            root.to_string_lossy().into(),
+            "--site-root".into(),
+            root.join("site").to_string_lossy().into(),
+        ])
+        .unwrap()
+        .unwrap();
+        let errors = crate::document::compile(&args).unwrap_err();
+        assert_eq!(errors[0].line, 3);
+        assert!(errors[0].message.contains("src/missing.c"));
+        assert!(errors[0].message.contains("missing.c"));
+    }
+
+    #[test]
+    fn code_link_rejects_outside_and_invalid_utf8() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("root");
+        fs::create_dir(&root).unwrap();
+        let input = root.join("note.md");
+        let outside = temp.path().join("outside.py");
+        fs::write(&outside, "print(1)").unwrap();
+        let args = crate::cli::parse([
+            "compile".to_owned(),
+            input.to_string_lossy().into(),
+            "--root".into(),
+            root.to_string_lossy().into(),
+            "--site-root".into(),
+            root.join("site").to_string_lossy().into(),
+        ])
+        .err();
+        assert!(args.is_some());
+        fs::write(&input, "\n[bad](../outside.py)\n").unwrap();
+        let args = crate::cli::parse([
+            "compile".to_owned(),
+            input.to_string_lossy().into(),
+            "--root".into(),
+            root.to_string_lossy().into(),
+            "--site-root".into(),
+            root.join("site").to_string_lossy().into(),
+        ])
+        .unwrap()
+        .unwrap();
+        let errors = crate::document::compile(&args).unwrap_err();
+        assert_eq!(errors[0].line, 2);
+        assert!(errors[0].message.contains("outside.py"));
+        assert!(errors[0].message.contains("outside root"));
+        fs::write(root.join("bad.py"), [0xff]).unwrap();
+        fs::write(&input, "[bad](bad.py)").unwrap();
+        let errors = crate::document::compile(&args).unwrap_err();
+        assert!(errors[0].message.contains("bad.py"));
+        assert!(errors[0].message.contains("UTF-8"));
     }
     #[cfg(unix)]
     #[test]

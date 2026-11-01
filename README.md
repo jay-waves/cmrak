@@ -100,6 +100,8 @@ comrakk compile ai/chatgpt/note.md --site-root _site
 
 共享资源位于 `_site/_shared/lib-comrak/<内容版本>/`；内容一致时复用，缺失或损坏时修复，不删除其他文件。`--site-root` 决定输出位置，不与 OUTPUT、`--output` 或 `--standalone` 混用。站点图片默认复制引用，可显式 `--images embed`。
 
+站点模式下，指向支持高亮的本地代码文件的普通链接会自动编译目标，并指向 `完整文件名/index.html`；query 和 fragment 保留。重复引用按规范化路径复用，缺失、越界或编译失败会在引用位置报错。代码内容只按文本高亮。单独编译与链接触发的编译共用文件锁；standalone 模式保留原有链接行为。
+
 
 ## 图片和路径
 

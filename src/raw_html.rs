@@ -3,7 +3,7 @@ use crate::{assets::escape, document::Attachments};
 
 pub fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> {
     let mut warnings = Vec::new();
-    let rewritten = rewrite_with_warnings(html, attachments, &mut warnings)?;
+    let rewritten = rewrite_with_warnings(html, attachments, &mut warnings, &mut |_| Ok(None))?;
     if let Some((_, message)) = warnings.into_iter().next() {
         return Err(message);
     }
@@ -14,6 +14,7 @@ pub fn rewrite_with_warnings(
     html: &str,
     attachments: &Attachments,
     warnings: &mut Vec<(usize, String)>,
+    code_link: &mut dyn FnMut(&str) -> Result<Option<String>, String>,
 ) -> Result<String, String> {
     let bytes = html.as_bytes();
     let mut result = String::with_capacity(html.len());
@@ -88,7 +89,14 @@ pub fn rewrite_with_warnings(
                 || (tag == "video" && name == "poster")
                 || (tag == "image" && matches!(name.as_str(), "href" | "xlink:href"));
             let decoded = decode_entities(value);
-            let link_problem = if tag == "a" && name == "href" {
+            let code_target = if tag == "a" && name == "href" {
+                code_link(&decoded)?
+            } else {
+                None
+            };
+            let link_problem = if code_target.is_some() {
+                None
+            } else if tag == "a" && name == "href" {
                 if decoded.to_ascii_lowercase().starts_with("file:") {
                     Some(format!("non-portable local link {decoded:?} was removed"))
                 } else {
@@ -103,7 +111,9 @@ pub fn rewrite_with_warnings(
             } else {
                 None
             };
-            let rewritten = if let Some(message) = link_problem {
+            let rewritten = if let Some(target) = code_target {
+                Some(target)
+            } else if let Some(message) = link_problem {
                 warnings.push((start, message));
                 Some(String::new())
             } else if matches!(name.as_str(), "srcset" | "imagesrcset") {

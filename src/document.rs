@@ -86,6 +86,8 @@ pub struct Attachments {
     mode: Images,
     private: Option<PathBuf>,
     dependencies: Rc<RefCell<HashSet<PathBuf>>>,
+    site_root: Option<PathBuf>,
+    compiled_code: RefCell<HashMap<PathBuf, PathBuf>>,
 }
 
 impl Attachments {
@@ -103,6 +105,8 @@ impl Attachments {
             mode,
             private: None,
             dependencies: Rc::default(),
+            site_root: None,
+            compiled_code: RefCell::default(),
         })
     }
 
@@ -136,6 +140,92 @@ impl Attachments {
             }
             dependencies.insert(path);
         }
+    }
+
+    pub(crate) fn code_link(
+        &self,
+        original: &str,
+        engine: &Engine,
+    ) -> Result<Option<String>, String> {
+        let Some(site) = &self.site_root else {
+            return Ok(None);
+        };
+        if original.starts_with('#')
+            || original.starts_with("//")
+            || original.to_ascii_lowercase().starts_with("file:")
+        {
+            return Ok(None);
+        }
+        let url = self
+            .join(original)
+            .map_err(|e| format!("invalid link {original:?}: {e}"))?;
+        if url.scheme() != "file" {
+            return Ok(None);
+        }
+        let path = url
+            .to_file_path()
+            .map_err(|_| format!("invalid code link {original:?}"))?;
+        if crate::source_code::language(&path).is_none() {
+            return Ok(None);
+        }
+        let input = dunce::canonicalize(&path)
+            .map_err(|e| format!("code link {original:?} ({}): {e}", path.display()))?;
+        if !input.starts_with(&self.root) {
+            return Err(format!(
+                "code link {original:?} ({}): outside root {}",
+                input.display(),
+                self.root.display()
+            ));
+        }
+        if self
+            .private
+            .as_ref()
+            .is_some_and(|private| input.starts_with(private))
+        {
+            return Err(format!(
+                "code link {original:?} ({}): application data is private",
+                input.display()
+            ));
+        }
+        let cached = self.compiled_code.borrow().get(&input).cloned();
+        let output = if let Some(output) = cached {
+            output
+        } else {
+            let output =
+                crate::site::page_path(&site.join(input.strip_prefix(&self.root).unwrap()));
+            let args = Args {
+                input: input.clone(),
+                output: output.clone(),
+                root: Some(self.root.clone()),
+                site_root: Some(site.clone()),
+                images: self.mode,
+                standalone: false,
+                asset_dir: None,
+                title: None,
+            };
+            compile_document(&args, engine, self.dependencies.clone()).map_err(|errors| {
+                format!(
+                    "code link {original:?} ({}): {}",
+                    input.display(),
+                    errors
+                        .into_iter()
+                        .map(|e| e.message)
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                )
+            })?;
+            self.compiled_code
+                .borrow_mut()
+                .insert(input.clone(), output.clone());
+            output
+        };
+        self.track(original);
+        let mut target =
+            Url::from_directory_path(output.parent().ok_or("code output has no parent")?)
+                .map_err(|_| "cannot form code preview URL")?;
+        target.set_query(url.query());
+        target.set_fragment(url.fragment());
+        Ok(Some(target.to_string()))
     }
 
     pub fn resolve(&self, original: &str, image: bool) -> Result<String, String> {
@@ -332,6 +422,22 @@ fn render_with_warnings(
             let position = data.sourcepos.start;
             if let NodeValue::Link(link) = &data.value {
                 let url = link.url.clone();
+                match attachments.code_link(&url, engine) {
+                    Ok(Some(target)) => {
+                        if let NodeValue::Link(link) = &mut data.value {
+                            link.url = target;
+                        }
+                        return None;
+                    }
+                    Err(message) => {
+                        return Some(Diagnostic {
+                            line: position.line.max(1),
+                            column: position.column.max(1),
+                            message,
+                        });
+                    }
+                    Ok(None) => {}
+                }
                 let problem = if url.to_ascii_lowercase().starts_with("file:") {
                     Some(format!("non-portable local link {url:?} was removed"))
                 } else {
@@ -370,8 +476,9 @@ fn render_with_warnings(
                     &clean,
                     attachments,
                     &mut local_warnings,
+                    &mut |url| attachments.code_link(url, engine),
                 ) {
-                    Ok(rewritten) if !local_warnings.is_empty() => {
+                    Ok(rewritten) => {
                         for (offset, message) in local_warnings {
                             let prefix = &clean[..offset];
                             let lines = prefix.bytes().filter(|&b| b == b'\n').count();
@@ -405,7 +512,6 @@ fn render_with_warnings(
                             message,
                         });
                     }
-                    _ => {}
                 }
             }
             if let NodeValue::CodeBlock(code) = &data.value
@@ -987,6 +1093,28 @@ pub(crate) fn compile_document(
 ) -> Result<Vec<Diagnostic>, Vec<Diagnostic>> {
     let input =
         dunce::canonicalize(&args.input).map_err(|e| failure(format!("cannot open input: {e}")))?;
+    let _code_lock = if let Some(site) = &args.site_root
+        && crate::source_code::language(&input).is_some()
+    {
+        use sha2::{Digest, Sha256};
+        fs::create_dir_all(site).map_err(failure)?;
+        let site = dunce::canonicalize(site).map_err(failure)?;
+        let lock_dir = site.join("_shared/lib-comrak/.locks");
+        fs::create_dir_all(&lock_dir).map_err(failure)?;
+        let mut hash = Sha256::new();
+        hash.update(input.to_string_lossy().as_bytes());
+        let lock = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(lock_dir.join(format!("{:x}.lock", hash.finalize())))
+            .map_err(failure)?;
+        lock.lock().map_err(failure)?;
+        Some(lock)
+    } else {
+        None
+    };
     let source =
         fs::read_to_string(&input).map_err(|e| failure(format!("cannot read UTF-8 input: {e}")))?;
     let root = dunce::canonicalize(args.root.as_deref().unwrap_or(Path::new(".")))
@@ -1015,6 +1143,12 @@ pub(crate) fn compile_document(
     let mut attachments =
         Attachments::new(&input, &output, root, args.images, args.standalone).map_err(failure)?;
     attachments.site = args.site_root.is_some();
+    attachments.site_root = args
+        .site_root
+        .as_ref()
+        .map(dunce::canonicalize)
+        .transpose()
+        .map_err(failure)?;
     attachments.dependencies = dependencies;
     let mut warnings = Vec::new();
     let body = if let Some(language) = crate::source_code::language(&input) {
