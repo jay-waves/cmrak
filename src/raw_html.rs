@@ -2,6 +2,19 @@
 use crate::{assets::escape, document::Attachments};
 
 pub fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> {
+    let mut warnings = Vec::new();
+    let rewritten = rewrite_with_warnings(html, attachments, &mut warnings)?;
+    if let Some((_, message)) = warnings.into_iter().next() {
+        return Err(message);
+    }
+    Ok(rewritten)
+}
+
+pub fn rewrite_with_warnings(
+    html: &str,
+    attachments: &Attachments,
+    warnings: &mut Vec<(usize, String)>,
+) -> Result<String, String> {
     let bytes = html.as_bytes();
     let mut result = String::with_capacity(html.len());
     let mut cursor = 0;
@@ -74,7 +87,26 @@ pub fn rewrite(html: &str, attachments: &Attachments) -> Result<String, String> 
             let image = (tag == "img" && name == "src")
                 || (tag == "video" && name == "poster")
                 || (tag == "image" && matches!(name.as_str(), "href" | "xlink:href"));
-            let rewritten = if matches!(name.as_str(), "srcset" | "imagesrcset") {
+            let decoded = decode_entities(value);
+            let link_problem = if tag == "a" && name == "href" {
+                if decoded.to_ascii_lowercase().starts_with("file:") {
+                    Some(format!("non-portable local link {decoded:?} was removed"))
+                } else {
+                    attachments
+                        .resolve(&decoded, false)
+                        .err()
+                        .filter(|message| {
+                            message.contains(" is outside root ")
+                                || message.contains(" is missing: ")
+                        })
+                }
+            } else {
+                None
+            };
+            let rewritten = if let Some(message) = link_problem {
+                warnings.push((start, message));
+                Some(String::new())
+            } else if matches!(name.as_str(), "srcset" | "imagesrcset") {
                 Some(rewrite_srcset(&decode_entities(value), attachments)?)
             } else if matches!(name.as_str(), "src" | "href" | "xlink:href" | "poster")
                 || (tag == "object" && name == "data")

@@ -3,7 +3,7 @@ use crate::assets;
 use std::{fs, path::Path};
 
 pub(crate) fn page_path(path: &Path) -> std::path::PathBuf {
-    path.with_extension("").join("index.html")
+    path.join("index.html")
 }
 
 pub(crate) fn rewrite(
@@ -81,6 +81,22 @@ pub(crate) fn rewrite(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn page_paths_keep_complete_names_to_avoid_collisions() {
+        assert_eq!(
+            page_path(Path::new("_site/example.md")),
+            Path::new("_site/example.md/index.html")
+        );
+        assert_eq!(
+            page_path(Path::new("_site/example.py")),
+            Path::new("_site/example.py/index.html")
+        );
+        assert_ne!(
+            page_path(Path::new("example.md")),
+            page_path(Path::new("example.py"))
+        );
+    }
     #[cfg(unix)]
     #[test]
     fn site_compiles_math_when_output_directory_uses_a_symlink() {
@@ -131,8 +147,8 @@ mod tests {
         .unwrap();
         crate::document::compile(&args).unwrap();
         let html = fs::read_to_string(&args.output).unwrap();
-        assert!(html.contains("href=\"../b/index.html?x=1&amp;y=2#part\""));
-        assert!(html.contains("href=\"../../other/index.html#top\""));
+        assert!(html.contains("href=\"../b.md/index.html?x=1&amp;y=2#part\""));
+        assert!(html.contains("href=\"../../other.markdown/index.html#top\""));
         assert!(html.contains("href=\"#here\""));
         assert!(html.contains("href=\"https://example.com/b.md#part\""));
         assert!(html.contains("src=\"../images/pic.png?size=2#view\""));
@@ -171,9 +187,9 @@ mod tests {
         assert!(!args.standalone);
         crate::document::compile(&args).unwrap();
         let html = fs::read_to_string(&args.output).unwrap();
-        assert_eq!(args.output, site.join("ai/chatgpt/note/index.html"));
+        assert_eq!(args.output, site.join("ai/chatgpt/note.md/index.html"));
         assert!(html.contains("../../../assets/example.webp"));
-        assert!(html.contains("../next/index.html#part"));
+        assert!(html.contains("../next.md/index.html#part"));
         assert!(html.contains("../../../_shared/lib-comrak/"));
         assert!(!html.contains("file:"));
         assert_eq!(

@@ -84,6 +84,8 @@ comrakk serve init.lua --root .
 
 诊断格式为 `path:line:column: error: message`，行列从 1 开始；数学或图表渲染错误、附件错误定位到对应 Markdown 节点。诊断写 stderr。编译失败不会覆盖已有 HTML。
 
+普通超链接使用 `file://` 或指向根目录之外时，编译器输出包含链接和源位置的 warning，保留链接文字并移除不可移植的目标。图片、图表脚本等需要读取的资源必须存在且位于 `--root` 内，违反时输出 error 并停止编译。
+
 ## 输出模式
 
 默认 standalone：内嵌基础 CSS、Monaspace Neon 可变 WOFF 代码字体、本地图片，以及当前页面需要的公式字体、图表资源。代码字号为 13px。无公式页面不附带 KaTeX 样式和字体。远程图片保留 URL，由浏览器加载。
@@ -94,7 +96,7 @@ comrakk serve init.lua --root .
 comrakk compile ai/chatgpt/note.md --site-root _site
 ```
 
-笔记库根目录默认当前工作目录，可通过 `--root DIR` 指定。示例输出 `_site/ai/chatgpt/note/index.html`，本地附件按笔记库目录结构复制，页面生成相对 URL。`/assets/example.webp` 表示笔记库根目录下的资源，生成 `../../../assets/example.webp`。Markdown 链接改为对应的 `目录/index.html` 链接，但不会递归编译其他笔记。
+笔记库根目录默认当前工作目录，可通过 `--root DIR` 指定。示例输出 `_site/ai/chatgpt/note.md/index.html`，本地附件按笔记库目录结构复制，页面生成相对 URL。`/assets/example.webp` 表示笔记库根目录下的资源，生成 `../../../assets/example.webp`。Markdown 链接改为对应的 `文件名/index.html` 链接，但不会递归编译其他笔记。
 
 共享资源位于 `_site/_shared/lib-comrak/<内容版本>/`；内容一致时复用，缺失或损坏时修复，不删除其他文件。`--site-root` 决定输出位置，不与 OUTPUT、`--output` 或 `--standalone` 混用。站点图片默认复制引用，可显式 `--images embed`。
 
@@ -103,7 +105,7 @@ comrakk compile ai/chatgpt/note.md --site-root _site
 
 相对路径基于输入 Markdown 所在目录解释，支持 `../`、URL 编码、查询参数和片段。默认 root 为当前工作目录，`--root` 可覆盖；解析符号链接后检查边界。站点模式中以 `/` 开头的路径基于笔记库 root 解释。
 
-standalone 内嵌本地图片，普通本地链接仍指向源文件。站点模式复制附件并生成页面相对链接，`.md` 和 `.markdown` 链接映射为对应的 `目录/index.html`，其他笔记须另行编译。允许普通链接目标尚不存在，悬空符号链接或越过 root 的路径报错。
+standalone 内嵌本地图片，普通本地链接仍指向源文件。站点模式复制附件并生成页面相对链接，`.md` 和 `.markdown` 链接映射为对应的 `文件名/index.html`，其他笔记须另行编译。允许普通链接目标尚不存在，悬空符号链接或越过 root 的路径报错。
 
 ## Chartist 图表
 

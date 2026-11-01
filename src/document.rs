@@ -330,6 +330,84 @@ fn render_with_warnings(
             }
             let mut data = node.data.borrow_mut();
             let position = data.sourcepos.start;
+            if let NodeValue::Link(link) = &data.value {
+                let url = link.url.clone();
+                let problem = if url.to_ascii_lowercase().starts_with("file:") {
+                    Some(format!("non-portable local link {url:?} was removed"))
+                } else {
+                    attachments.resolve(&url, false).err().filter(|message| {
+                        message.contains(" is outside root ") || message.contains(" is missing: ")
+                    })
+                };
+                if let Some(message) = problem {
+                    warnings.push(Diagnostic {
+                        line: position.line.max(1),
+                        column: position.column.max(1),
+                        message,
+                    });
+                    drop(data);
+                    for child in node.children().collect::<Vec<_>>() {
+                        node.insert_before(child);
+                    }
+                    node.detach();
+                    return None;
+                }
+            }
+            let html = match &data.value {
+                NodeValue::HtmlInline(html) => Some(html.as_str()),
+                NodeValue::HtmlBlock(html)
+                    if !html.literal.trim_start().starts_with("<chartist")
+                        && !html.literal.trim_start().starts_with("<mermaid") =>
+                {
+                    Some(html.literal.as_str())
+                }
+                _ => None,
+            };
+            if let Some(html) = html {
+                let clean = strip_script_elements(html);
+                let mut local_warnings = Vec::new();
+                match crate::raw_html::rewrite_with_warnings(
+                    &clean,
+                    attachments,
+                    &mut local_warnings,
+                ) {
+                    Ok(rewritten) if !local_warnings.is_empty() => {
+                        for (offset, message) in local_warnings {
+                            let prefix = &clean[..offset];
+                            let lines = prefix.bytes().filter(|&b| b == b'\n').count();
+                            let column = if lines == 0 {
+                                position.column + prefix.len()
+                            } else {
+                                prefix.rsplit('\n').next().unwrap_or("").len() + 1
+                            };
+                            warnings.push(Diagnostic {
+                                line: position.line + lines,
+                                column,
+                                message,
+                            });
+                        }
+                        let block = matches!(&data.value, NodeValue::HtmlBlock(_));
+                        data.value = NodeValue::Raw(if block {
+                            rewritten.replacen(
+                                '>',
+                                &format!(" data-line=\"{}\">", position.line.max(1)),
+                                1,
+                            )
+                        } else {
+                            rewritten
+                        });
+                        return None;
+                    }
+                    Err(message) => {
+                        return Some(Diagnostic {
+                            line: position.line.max(1),
+                            column: position.column.max(1),
+                            message,
+                        });
+                    }
+                    _ => {}
+                }
+            }
             if let NodeValue::CodeBlock(code) = &data.value
                 && code.fenced
                 && code.info.split_whitespace().next() == Some("mermaid")
@@ -364,15 +442,7 @@ fn render_with_warnings(
                         column: position.column.max(1),
                         message,
                     };
-                    if diagnostic.message.starts_with("attachment ")
-                        && (diagnostic.message.contains(" is outside root ")
-                            || diagnostic.message.contains(" is missing: "))
-                    {
-                        warnings.push(diagnostic);
-                        None
-                    } else {
-                        Some(diagnostic)
-                    }
+                    Some(diagnostic)
                 }
             }
         })
@@ -892,7 +962,17 @@ pub fn compile(args: &Args) -> Result<(), Vec<Diagnostic>> {
             .name("comrak-compiler".into())
             .stack_size(16 * 1024 * 1024)
             .spawn_scoped(scope, || {
-                compile_document(args, &Engine::default(), Rc::default()).map(|_| ())
+                compile_document(args, &Engine::default(), Rc::default()).map(|warnings| {
+                    for warning in warnings {
+                        eprintln!(
+                            "{}:{}:{}: warning: {}",
+                            args.input.display(),
+                            warning.line,
+                            warning.column,
+                            warning.message
+                        );
+                    }
+                })
             })
             .map_err(|error| failure(format!("cannot start compiler thread: {error}")))?
             .join()
@@ -1126,10 +1206,9 @@ mod tests {
             &attachments,
             &mut warnings,
         );
-        assert!(html.is_ok());
-        assert_eq!(warnings.len(), 2);
+        assert!(html.is_err());
+        assert_eq!(warnings.len(), 1);
         assert!(warnings[0].message.contains("outside root"));
-        assert!(warnings[1].message.contains("is missing"));
 
         warnings.clear();
         let html = render_with_warnings(
@@ -1139,8 +1218,45 @@ mod tests {
             &mut warnings,
         )
         .unwrap();
-        assert!(html.contains("../outside.md"));
+        assert!(html.contains("outside"));
+        assert!(!html.contains("../outside.md"));
         assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn local_links_warn_with_positions_and_required_images_fail() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("root");
+        fs::create_dir(&root).unwrap();
+        let input = root.join("note.md");
+        fs::write(&input, "Intro\n\n[local](file:///elsewhere/note.pdf)\n\n<a href=\"file:///elsewhere/a.pdf\">raw</a>\n").unwrap();
+        let args = Args {
+            input,
+            output: root.join("site/note/index.html"),
+            root: Some(root.clone()),
+            site_root: Some(root.join("site")),
+            images: Images::Reference,
+            standalone: false,
+            asset_dir: None,
+            title: None,
+        };
+        let warnings = compile_document(&args, &Engine::default(), Rc::default()).unwrap();
+        assert_eq!(warnings.len(), 2);
+        assert_eq!(warnings[0].line, 3);
+        assert_eq!(warnings[1].line, 5);
+        assert!(warnings[0].message.contains("file:///elsewhere/note.pdf"));
+        assert!(warnings[1].message.contains("file:///elsewhere/a.pdf"));
+        let html = fs::read_to_string(&args.output).unwrap();
+        assert!(html.contains("local"));
+        assert!(html.contains("raw"));
+        assert!(!html.contains("file:///elsewhere/"));
+        let outside = temp.path().join("outside.png");
+        fs::write(&outside, "image").unwrap();
+        fs::write(&args.input, "text\n\n![image](../outside.png)\n").unwrap();
+        let errors = compile_document(&args, &Engine::default(), Rc::default()).unwrap_err();
+        assert_eq!(errors[0].line, 3);
+        assert!(errors[0].message.contains("../outside.png"));
+        assert!(errors[0].message.contains("outside root"));
     }
 
     #[test]
@@ -1522,9 +1638,8 @@ export default function(container) {
             &attachments,
             &mut warnings,
         )
-        .unwrap();
-        assert!(html.contains("missing.png"));
-        assert_eq!(warnings[0].line, 3);
-        assert!(warnings[0].message.contains("missing.png"));
+        .unwrap_err();
+        assert_eq!(html[0].line, 3);
+        assert!(html[0].message.contains("missing.png"));
     }
 }
