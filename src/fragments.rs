@@ -51,7 +51,9 @@ pub(crate) fn render_code_block(
                 .map_err(|_| "viz requires a local file")?;
             let source = fs::read_to_string(&path)
                 .map_err(|e| format!("cannot read viz {reference:?}: {e}"))?;
-            let (html, interactive) = engine.viz(&source, index)?;
+            let (html, interactive) = engine
+                .viz(&source, index)
+                .map_err(|e| format!("Chartist {reference:?}: {e}"))?;
             let module = if interactive {
                 Some(attachments.chart_module(&source)?)
             } else {
@@ -194,7 +196,8 @@ pub(crate) fn render_graph_tag(
             // Reuse the same path resolution and module rendering as fenced viz.
             assets::file_url(&path)?.to_string()
         } else {
-            fs::read_to_string(&path).map_err(|e| format!("cannot read mermaid file: {e}"))?
+            fs::read_to_string(&path)
+                .map_err(|e| format!("cannot read mermaid file {}: {e}", path.display()))?
         }
     } else if tag == "mermaid" {
         body
@@ -206,11 +209,19 @@ pub(crate) fn render_graph_tag(
         .map(|w| format!(" style=\"--viz-width:{w}\""))
         .unwrap_or_default();
     let content = if tag == "chartist" {
-        render_code_block("viz", &source, engine, attachments, index, preview)?
+        render_code_block("viz", &source, engine, attachments, index, preview)
+            .map_err(|e| match &source_path {
+                Some(path) => format!("chartist source {path:?}: {e}"),
+                None => e,
+            })?
             .ok_or("cannot render chartist")?
     } else {
         let svg = engine
-            .render("diagram", &source, "", index)?
+            .render("diagram", &source, "", index)
+            .map_err(|e| match &source_path {
+                Some(path) => format!("mermaid {path:?}: {e}"),
+                None => e,
+            })?
             .ok_or("cannot render mermaid")?;
         format!("<div class=\"diagram\">{svg}</div>")
     };

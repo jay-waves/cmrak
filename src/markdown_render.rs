@@ -169,6 +169,17 @@ impl Renderer<'_> {
                             } else {
                                 cursor
                             };
+                        let language = info.split_whitespace().next().unwrap_or("");
+                        if !language.is_empty()
+                            && !matches!(
+                                language,
+                                "mermaid" | "viz" | "math" | "text" | "plaintext"
+                            )
+                            && matches!(self.engine.render("code", &text, language, id), Ok(None))
+                        {
+                            let warning = self.diag(offset, format!("unknown highlight.js language {language:?}; displaying plain text"));
+                            self.warnings.push(warning);
+                        }
                         let result = fragments::render_code_block(
                             info,
                             &text,
@@ -177,6 +188,21 @@ impl Renderer<'_> {
                             id,
                             false,
                         );
+                        let result = if !language.is_empty()
+                            && !matches!(language, "mermaid" | "viz" | "math")
+                        {
+                            match result {
+                                Err(message) => {
+                                    let warning = self
+                                        .diag(offset, format!("{message}; displaying plain text"));
+                                    self.warnings.push(warning);
+                                    Ok(Some(format!("<pre><code>{}</code></pre>", escape(&text))))
+                                }
+                                other => other,
+                            }
+                        } else {
+                            result
+                        };
                         out.push(self.compiled(offset, result, true));
                     } else if fragments::graph_tag_name(&text).is_some() {
                         let id = self.graph_ids.for_identity(text.trim().to_owned());

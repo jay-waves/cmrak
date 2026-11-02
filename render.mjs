@@ -26,7 +26,10 @@ globalThis.renderFragment = (kind, source, language, index) => {
     }
     return { html };
   } catch (error) {
-    return { error: error.message || String(error) };
+    const component = kind === 'diagram' ? 'Pele' : (kind === 'math' || kind === 'display') ? 'KaTeX' : 'highlight.js';
+    const detail = error?.message || String(error);
+    const name = error?.name && error.name !== 'Error' ? `${error.name}: ` : '';
+    return { error: `${component}: ${name}${detail}` };
   }
 };
 
