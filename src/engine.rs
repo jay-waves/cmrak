@@ -59,7 +59,8 @@ impl Renderer {
         runtime.set_max_stack_size(4 * 1024 * 1024);
         let context = Context::full(&runtime).map_err(|e| e.to_string())?;
         context.with(|ctx| {
-            ctx.eval::<(), _>(include_str!("../generated/render.js"))
+            ctx.eval::<(), _>(include_str!("../generated/intl.js"))
+                .and_then(|_| ctx.eval::<(), _>(include_str!("../generated/render.js")))
                 .catch(&ctx)
                 .map_err(|e| format!("cannot initialize embedded renderers: {e}"))
         })?;
@@ -205,6 +206,14 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn intl_number_format_handles_grouping_and_rounding() {
+        let renderer = Renderer::new().unwrap();
+        renderer.context.with(|ctx| {
+            let result: String = ctx.eval("new Intl.NumberFormat('en-US', {useGrouping: true, maximumFractionDigits: 2}).format(1234.567)").unwrap();
+            assert_eq!(result, "1,234.57");
+        });
+    }
     #[test]
     fn shared_cache_reuses_fragments_across_engines() {
         let first = Engine::default();

@@ -11,6 +11,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'generated');
 const deps = dirname(dirname(createRequire(import.meta.url).resolve('katex/package.json')));
 await mkdir(resolve(output, 'fonts'), { recursive: true });
+await build({ entryPoints: [resolve(root, 'intl.mjs')], outfile: resolve(output, 'intl.js'), bundle: true, format: 'iife', platform: 'neutral', target: 'es2020', minifyWhitespace: true, minifyIdentifiers: true, minifySyntax: false, banner: { js: 'globalThis.Intl ??= {};' }, legalComments: 'inline' });
 for (const stale of ['d3.css', 'd3-module.js', 'D3-LICENSE']) await rm(resolve(output, stale), { force: true });
 await build({ entryPoints: [resolve(root, 'navigation.mjs')], outfile: resolve(output, 'navigation.js'), bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify: true });
 await build({
@@ -82,3 +83,7 @@ for (const [name, path] of [
   ['Pele-LICENSE', 'node_modules/pele/LICENSE'],
 ]) await cp(resolve(deps, path.replace(/^node_modules\//, '')), resolve(output, name));
 console.log(`Prepared cmrak assets: ${output}`);
+
+const formatjsPackages = ['intl-numberformat', 'intl-locale', 'intl-getcanonicallocales', 'intl-pluralrules', 'intl-localematcher', 'bigdecimal'];
+const formatjsLicenses = await Promise.all(formatjsPackages.map(async name => `@formatjs/${name}\n${await readFile(resolve(root, 'node_modules/@formatjs', name, 'LICENSE.md'), 'utf8')}`));
+await writeFile(resolve(output, 'FormatJS-LICENSE'), formatjsLicenses.join('\n\n'));

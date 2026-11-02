@@ -19,7 +19,7 @@ await cp(resolve(root, 'README.md'), resolve(output, 'README.md'));
 await cp(resolve(root, 'AGENTS.md'), resolve(output, 'AGENTS.md'));
 await cp(resolve(root, 'examples'), resolve(output, 'examples'), { recursive: true });
 await cp(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
-for (const name of ['KaTeX-LICENSE', 'highlight.js-LICENSE', 'Pele-LICENSE', 'Chartist-LICENSE', 'LinkeDOM-LICENSE']) {
+for (const name of ['KaTeX-LICENSE', 'highlight.js-LICENSE', 'Pele-LICENSE', 'Chartist-LICENSE', 'LinkeDOM-LICENSE', 'FormatJS-LICENSE']) {
   await cp(resolve(root, 'generated', name), resolve(output, name));
 }
 console.log(`Standalone executable: ${resolve(output, `cmrak${suffix}`)}`);

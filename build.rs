@@ -14,6 +14,7 @@ fn main() {
             let path = entry.unwrap().path();
             if path.is_file()
                 && path.file_name().unwrap() != "render.js"
+                && path.file_name().unwrap() != "intl.js"
                 && path.file_name().unwrap() != "version.txt"
             {
                 assets.push(path);
