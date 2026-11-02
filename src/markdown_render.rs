@@ -152,10 +152,10 @@ impl Renderer<'_> {
                 return None;
             }
             let block = self.source.get(range.clone())?;
-            if let Some(start) = block.find(fragment) {
-                if !block[start + fragment.len()..].contains(fragment) {
-                    return Some(range.start + start + line_start + bytes);
-                }
+            if let Some(start) = block.find(fragment)
+                && !block[start + fragment.len()..].contains(fragment)
+            {
+                return Some(range.start + start + line_start + bytes);
             }
             // Markdown strips container markers and indentation from fenced code.
             let mut lines = block.split_inclusive('\n');
