@@ -723,6 +723,10 @@ mod tests {
                 6,
             ),
             ("before\n\n$x + \\invalidcommand$\n", 3),
+            (
+                "> ```mermaid\n> sequenceDiagram\n> Alice ->> Bob: hi\n> foo\n> ```\n",
+                4,
+            ),
         ] {
             let errors = render(source, &engine, &attachments).unwrap_err();
             assert_eq!(errors[0].line, expected, "{errors:?}");
