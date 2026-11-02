@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
-pub const HELP: &str = "cmrak — compile Markdown or source code to static HTML
+pub const HELP: &str = r#"cmrak — compile Markdown or source code to static HTML
 
-Usage: cmrak <compile> [OPTIONS] <INPUT> [OUTPUT]\n       cmrak serve [INPUT --root DIR] [--site-root DIR] [--port PORT]\n       cmrak stop
+Usage: cmrak <compile> [OPTIONS] <INPUT> [OUTPUT]
+       cmrak serve [INPUT --root DIR] [--site-root DIR] [--port PORT]
+       cmrak stop
 
 Options:
   -o, --output <PATH>                 Output HTML (default: input with .html)
@@ -19,7 +21,19 @@ Site resources are versioned under <site-root>/_shared/cmrak. Existing matching 
 Remote image URLs are preserved in all modes and loaded by the browser.
 Recognized source files (C/C++, BibTeX, Python, Lua, shell, JS/TS, Rust, etc.)
 are highlighted with highlight.js using the current code theme and fonts.
-";
+
+Chartist charts:
+  <chartist src="chart.js" width="75%" caption="Description"></chartist>
+  The JS module path is relative to the Markdown file and must be inside --root.
+  width and caption are optional. Supported imports are chartist, chartist/server,
+  and @chartist-js/essentials; use Chartist layers for common chart features.
+  Default-export a synchronous function that renders SVG into its container.
+  Set explicit dimensions: compile-time rendering has no browser layout,
+  network, canvas or timers. Give the SVG an accessible label.
+  Optionally export hydrate(container) to add browser interaction to the existing
+  SVG without redrawing it. Verify rendering and interactions in a browser.
+  See the bundled examples/viz/ and README.md for examples.
+"#;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Images {

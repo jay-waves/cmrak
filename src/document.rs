@@ -945,7 +945,7 @@ export default function(container) {
         compile(&args).unwrap();
         let html = fs::read_to_string(&output).unwrap();
         assert!(html.contains("/viz.js\""));
-        assert!(html.contains("/viz.css\""));
+        assert!(html.contains("/chartist.css\""));
         fs::write(
             root.join("chart.js"),
             "export default () => { throw Error('broken chart') }",

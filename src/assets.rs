@@ -173,13 +173,13 @@ pub fn viz_stylesheet(standalone: bool, directory: Option<&Path>) -> Result<Stri
     if standalone {
         return Ok(format!(
             "<style>{}</style>",
-            include_str!("../generated/viz.css")
+            include_str!("../generated/chartist.css")
         ));
     }
     let directory = directory
         .map(Path::to_path_buf)
         .map_or_else(shared_base, Ok)?;
-    let path = dunce::canonicalize(directory.join(VERSION.trim()).join("viz.css"))
+    let path = dunce::canonicalize(directory.join(VERSION.trim()).join("chartist.css"))
         .map_err(|e| e.to_string())?;
     Ok(format!(
         "<link rel=\"stylesheet\" href=\"{}\">",
@@ -244,8 +244,12 @@ pub fn viz_runtime(
         "chartist-server-module.js",
         include_bytes!("../generated/chartist-server-module.js"),
     )?;
+    let essentials = module_url(
+        "chartist-essentials-module.js",
+        include_bytes!("../generated/chartist-essentials-module.js"),
+    )?;
     Ok(format!(
-        "<script src=\"{}\"></script><script type=\"importmap\">{{\"imports\":{{\"chartist\":\"{module}\",\"chartist/server\":\"{server}\"}}}}</script>",
+        "<script src=\"{}\"></script><script type=\"importmap\">{{\"imports\":{{\"chartist\":\"{module}\",\"chartist/server\":\"{server}\",\"@chartist-js/essentials\":\"{essentials}\"}}}}</script>",
         escape(&source)
     ))
 }

@@ -119,7 +119,7 @@ standalone 内嵌本地图片，普通本地链接仍指向源文件。站点模
 <chartist src="chart.js" width="75%" caption="数据变化"></chartist>
 ```
 
-`width` 和 `caption` 可省略。`chart.js` 同步生成 SVG：
+`width` 和 `caption` 可省略。默认图表容器占满正文宽度；指定宽度时不会超出正文容器。`chart.js` 同步生成 SVG：
 
 ```js
 import { lineChartConfig } from 'chartist';
@@ -132,8 +132,8 @@ export default function render(container) {
 }
 ```
 
-只支持导入 `chartist` 和 `chartist/server`；路径须位于 `--root` 内。默认输出静态 SVG，可选导出 `hydrate(container)` 为浏览器添加交互。更多示例见 `examples/viz/`；旧版 D3 示例尚未迁移。
+只支持导入 `chartist`、`chartist/server` 和 `@chartist-js/essentials`；路径须位于 `--root` 内。默认输出静态 SVG，可选导出 `hydrate(container)` 为浏览器添加交互。更多示例见 `examples/viz/`；旧版 D3 示例尚未迁移。
 
-Chartist 默认样式位于 `chartist.css`：图表使用正文衬线字体、紧凑线宽和柔和配色。Chartist 不自动生成坐标轴标题；自定义标题可使用 `ct-axis-title-x`（横排）和 `ct-axis-title-y`（竖排），刻度文字保持横排。
+Chartist 默认样式位于 `chartist.css`：图表使用正文衬线字体、紧凑线宽和柔和配色。可通过 `@chartist-js/essentials` 的 `axisTitle`、`valueLabels` 等图层添加坐标轴标题和数值标签；默认系列采用 Paul Tol Muted 配色。
 
 独立编译使用 pulldown-cmark 事件流，不依赖 Comrak。标题仍生成原生 `<details>` 分节和兼容锚点；脚注在编译时生成为段落或表格后的原生 `<details>`，关闭 JavaScript 也可展开；启用脚本时隐藏脚注折叠标题和收起面板，仅点击正文上标开关段后脚注，沿用原有虚线边框样式，同段重复引用共用面板，不同段落分别生成，循环脚注保留为引用文字。数学推荐使用 `$…$` 和 `$$…$$`，不再解析 `\(…\)`、`\[…\]` 数学定界符。

@@ -1,5 +1,6 @@
 import { build } from 'esbuild';
 import * as chartist from 'chartist';
+import * as essentials from '@chartist-js/essentials';
 import * as chartistServer from 'chartist/server';
 import { mkdir, readFile, writeFile, readdir, cp, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -12,7 +13,7 @@ const output = resolve(root, 'generated');
 const deps = dirname(dirname(createRequire(import.meta.url).resolve('katex/package.json')));
 await mkdir(resolve(output, 'fonts'), { recursive: true });
 await build({ entryPoints: [resolve(root, 'intl.mjs')], outfile: resolve(output, 'intl.js'), bundle: true, format: 'iife', platform: 'neutral', target: 'es2020', minifyWhitespace: true, minifyIdentifiers: true, minifySyntax: false, banner: { js: 'globalThis.Intl ??= {};' }, legalComments: 'inline' });
-for (const stale of ['d3.css', 'd3-module.js', 'D3-LICENSE']) await rm(resolve(output, stale), { force: true });
+for (const stale of ['d3.css', 'd3-module.js', 'D3-LICENSE', 'viz.css']) await rm(resolve(output, stale), { force: true });
 await build({ entryPoints: [resolve(root, 'navigation.mjs')], outfile: resolve(output, 'navigation.js'), bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify: true });
 await build({
   entryPoints: [resolve(root, 'render.mjs')],
@@ -26,10 +27,12 @@ await build({
 const shim = (module, global) => Object.keys(module).map(name => `export const ${name}=globalThis.${global}.${name};`).join('\n');
 const moduleSource = shim(chartist, '__vizChartist');
 const serverModuleSource = shim(chartistServer, '__vizChartistServer');
+const essentialsModuleSource = shim(essentials, '__vizEssentials');
+await writeFile(resolve(output, 'chartist-essentials-module.js'), essentialsModuleSource);
 await writeFile(resolve(output, 'chartist-module.js'), moduleSource);
 await writeFile(resolve(output, 'chartist-server-module.js'), serverModuleSource);
 await build({
-  stdin: { contents: "import * as c from 'chartist'; import * as s from 'chartist/server'; globalThis.__vizChartist = c; globalThis.__vizChartistServer = s;", resolveDir: root },
+  stdin: { contents: "import * as c from 'chartist'; import * as s from 'chartist/server'; import * as e from '@chartist-js/essentials'; globalThis.__vizChartist = c; globalThis.__vizChartistServer = s; globalThis.__vizEssentials = e;", resolveDir: root },
   outfile: resolve(output, 'viz.js'), bundle: true, format: 'iife', platform: 'browser',
   target: 'es2020', minify: true, legalComments: 'inline',
 });
@@ -64,12 +67,12 @@ const compactKatex = katex.replace(/src:([^;}]+)/g, (declaration, sources) => {
 const compact = css;
 await writeFile(resolve(output, 'style.css'), compact);
 await writeFile(resolve(output, 'katex.css'), compactKatex);
-const vizCss = [await readFile(resolve(root, 'chartist.css'), 'utf8'), await readFile(resolve(root, 'viz.css'), 'utf8')].join('\n');
-await writeFile(resolve(output, 'viz.css'), vizCss);
+const vizCss = [await readFile(resolve(root, 'node_modules/@chartist-js/essentials/dist/styles.css'), 'utf8'), await readFile(resolve(root, 'chartist.css'), 'utf8')].join('\n');
+await writeFile(resolve(output, 'chartist.css'), vizCss);
 const mermaidCss = await readFile(resolve(root, 'mermaid.css'), 'utf8');
 await writeFile(resolve(output, 'mermaid.css'), mermaidCss);
 const hash = createHash('sha256').update(compact).update(compactKatex).update(vizCss);
-hash.update(moduleSource).update(serverModuleSource).update(await readFile(resolve(output, 'viz.js'))).update(mermaidCss);
+hash.update(moduleSource).update(serverModuleSource).update(essentialsModuleSource).update(await readFile(resolve(output, 'viz.js'))).update(mermaidCss);
 hash.update(await readFile(resolve(output, 'navigation.js')));
 for (const name of (await readdir(resolve(output, 'fonts'))).sort()) {
   hash.update(name).update(await readFile(resolve(output, 'fonts', name)));
@@ -79,6 +82,7 @@ for (const [name, path] of [
   ['KaTeX-LICENSE', 'node_modules/katex/LICENSE'],
   ['highlight.js-LICENSE', 'node_modules/highlight.js/LICENSE'],
   ['Chartist-LICENSE', 'node_modules/chartist/LICENSE-MIT'],
+  ['Chartist-Essentials-LICENSE', 'node_modules/@chartist-js/essentials/LICENSE-MIT'],
   ['LinkeDOM-LICENSE', 'node_modules/linkedom/LICENSE'],
   ['Pele-LICENSE', 'node_modules/pele/LICENSE'],
 ]) await cp(resolve(deps, path.replace(/^node_modules\//, '')), resolve(output, name));

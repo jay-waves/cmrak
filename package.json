@@ -8,6 +8,7 @@
     "package:cmrak": "node scripts/package-cmrak.mjs"
   },
   "dependencies": {
+    "@chartist-js/essentials": "2.2.0",
     "@formatjs/intl-getcanonicallocales": "3.3.0",
     "@formatjs/intl-locale": "5.4.2",
     "@formatjs/intl-numberformat": "10.0.2",

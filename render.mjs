@@ -1,4 +1,5 @@
 import * as chartist from 'chartist';
+import * as essentials from '@chartist-js/essentials';
 import * as chartistServer from 'chartist/server';
 import { parseHTML } from 'linkedom/worker';
 import katex from 'katex';
@@ -45,6 +46,7 @@ globalThis.renderFragment = (kind, source, language, index) => {
 };
 
 globalThis.__vizChartist = chartist;
+globalThis.__vizEssentials = essentials;
 globalThis.__vizChartistServer = chartistServer;
 globalThis.prepareViz = index => {
   const { document } = parseHTML('<!doctype html><html><body></body></html>');

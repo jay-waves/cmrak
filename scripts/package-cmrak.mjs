@@ -1,4 +1,4 @@
-import { mkdir, cp } from 'node:fs/promises';
+import { mkdir, cp, rm } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -16,10 +16,11 @@ const output = resolve(root, 'release', `cmrak-${process.platform}-${process.arc
 await mkdir(output, { recursive: true });
 await cp(resolve(root, 'target/release', `cmrak${suffix}`), resolve(output, `cmrak${suffix}`));
 await cp(resolve(root, 'README.md'), resolve(output, 'README.md'));
-await cp(resolve(root, 'AGENTS.md'), resolve(output, 'AGENTS.md'));
+// Remove the file from packages produced by older versions of this script.
+await rm(resolve(output, 'AGENTS.md'), { force: true });
 await cp(resolve(root, 'examples'), resolve(output, 'examples'), { recursive: true });
 await cp(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
-for (const name of ['KaTeX-LICENSE', 'highlight.js-LICENSE', 'Pele-LICENSE', 'Chartist-LICENSE', 'LinkeDOM-LICENSE', 'FormatJS-LICENSE']) {
+for (const name of ['KaTeX-LICENSE', 'highlight.js-LICENSE', 'Pele-LICENSE', 'Chartist-LICENSE', 'Chartist-Essentials-LICENSE', 'LinkeDOM-LICENSE', 'FormatJS-LICENSE']) {
   await cp(resolve(root, 'generated', name), resolve(output, name));
 }
 console.log(`Standalone executable: ${resolve(output, `cmrak${suffix}`)}`);

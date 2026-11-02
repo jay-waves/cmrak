@@ -101,7 +101,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         let site = root.join("site");
-        fs::write(root.join("chart.js"), "export default c => { c.innerHTML = '<svg></svg>' }; export function hydrate(c) { c.dataset.ready = '1' }").unwrap();
+        fs::write(root.join("chart.js"), "import { axisTitle } from '@chartist-js/essentials'; export default c => { c.innerHTML = '<svg></svg>' }; export function hydrate(c) { c.dataset.ready = typeof axisTitle }").unwrap();
         for name in ["a.md", "b.md"] {
             fs::write(root.join(name), "<chartist src=\"chart.js\"></chartist>\n").unwrap();
             let args = crate::cli::parse([
@@ -118,6 +118,10 @@ mod tests {
             assert!(output.contains("/navigation.js\""), "{output}");
             assert!(output.contains("/chartist-module.js\""), "{output}");
             assert!(output.contains("/chartist-server-module.js\""), "{output}");
+            assert!(
+                output.contains("/chartist-essentials-module.js\""),
+                "{output}"
+            );
             assert!(output.contains("/charts/"), "{output}");
             assert!(!output.contains("data:text/javascript;base64,"));
             assert!(!output.contains("file:///"));

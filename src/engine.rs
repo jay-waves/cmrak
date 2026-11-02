@@ -88,6 +88,18 @@ impl Renderer {
                 .finish::<()>()
             })
             .map_err(|e| format!("cannot initialize Chartist server module: {e}"))?;
+        context
+            .with(|ctx| {
+                Module::declare(
+                    ctx.clone(),
+                    "@chartist-js/essentials",
+                    include_str!("../generated/chartist-essentials-module.js"),
+                )?
+                .eval()?
+                .1
+                .finish::<()>()
+            })
+            .map_err(|e| format!("cannot initialize Chartist essentials module: {e}"))?;
         Ok(Self {
             context,
             _runtime: runtime,
@@ -248,6 +260,13 @@ mod tests {
     #[test]
     fn chartist_examples_render() {
         let engine = Engine::default();
+        assert!(
+            engine
+                .viz(include_str!("../examples/viz/bars.js"), 0)
+                .unwrap()
+                .0
+                .contains("ct-axis-title")
+        );
         for source in [
             include_str!("../examples/viz/bars.js"),
             include_str!("../examples/viz/line.js"),
