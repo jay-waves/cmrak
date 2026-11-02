@@ -1,4 +1,58 @@
 use cmrak::{cli, document};
+use std::{fs, path::PathBuf};
+
+fn compile_svg(arguments: &[String]) -> Result<(), String> {
+    let mut positional = Vec::new();
+    let mut root = None;
+    let mut args = arguments.iter();
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--root" => {
+                root = Some(PathBuf::from(
+                    args.next().ok_or("--root requires a directory")?,
+                ))
+            }
+            "-h" | "--help" => {
+                println!(
+                    "Usage: cmrak svg INPUT [OUTPUT] [--root DIR]\n\nCompile a .mmd diagram or Chartist .js module to standalone SVG."
+                );
+                return Ok(());
+            }
+            flag if flag.starts_with('-') => return Err(format!("unknown svg option {flag}")),
+            path => positional.push(PathBuf::from(path)),
+        }
+    }
+    if !(1..=2).contains(&positional.len()) {
+        return Err("usage: cmrak svg INPUT [OUTPUT] [--root DIR]".into());
+    }
+    let input = &positional[0];
+    let input =
+        fs::canonicalize(input).map_err(|e| format!("cannot read {}: {e}", input.display()))?;
+    let root =
+        fs::canonicalize(root.unwrap_or(std::env::current_dir().map_err(|e| e.to_string())?))
+            .map_err(|e| format!("invalid --root: {e}"))?;
+    if !input.starts_with(&root) {
+        return Err("input is outside --root".into());
+    }
+    let extension = input.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+    let source =
+        fs::read_to_string(&input).map_err(|e| format!("cannot read {}: {e}", input.display()))?;
+    let svg = match extension.to_ascii_lowercase().as_str() {
+        "mmd" => cmrak::engine::Engine::default()
+            .render("diagram", &source, "", 0)
+            .map_err(|e| format!("Mermaid: {e}"))?
+            .ok_or("Mermaid returned no SVG")?,
+        "js" => cmrak::engine::Engine::default()
+            .render_chart_svg(&source)
+            .map_err(|e| format!("Chartist: {e}"))?,
+        _ => return Err("cmrak svg accepts only .mmd and .js input files".into()),
+    };
+    let output = positional
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| input.with_extension("svg"));
+    fs::write(&output, svg).map_err(|e| format!("cannot write {}: {e}", output.display()))
+}
 
 fn is_source_diagnostic(message: &str) -> bool {
     regex::Regex::new(r"^.+:[0-9]+:[0-9]+: (?:error|warning):")
@@ -9,6 +63,7 @@ fn is_source_diagnostic(message: &str) -> bool {
 fn main() -> std::process::ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
     let result = match arguments.first().map(String::as_str) {
+        Some("svg") => Some(compile_svg(&arguments[1..])),
         Some("watch") => Some(Err("watch has been removed; use serve".into())),
         Some("preview") => Some(Err("unknown command preview; use serve".into())),
         Some("serve")

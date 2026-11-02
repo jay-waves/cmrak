@@ -131,6 +131,30 @@ impl Renderer {
 }
 
 impl Engine {
+    pub fn render_chart_svg(&self, source: &str) -> Result<String, String> {
+        let (markup, _) = self.viz(source, 0)?;
+        let start = markup
+            .find("<svg")
+            .ok_or("Chartist did not render an SVG")?;
+        let end = markup
+            .rfind("</svg>")
+            .ok_or("Chartist returned invalid SVG")?
+            + "</svg>".len();
+        let svg = &markup[start..end];
+        let styles = format!(
+            "{}\n{}",
+            include_str!("../generated/chartist.css"),
+            include_str!("../chartist.css")
+        );
+        let insert = svg.find('>').ok_or("Chartist returned invalid SVG")? + 1;
+        Ok(format!(
+            "{}<style>{}</style>{}",
+            &svg[..insert],
+            styles.replace("</style", "<\\/style"),
+            &svg[insert..]
+        ))
+    }
+
     pub fn viz(&self, source: &str, index: usize) -> Result<(String, bool), String> {
         let key = (source.to_owned(), index);
         let shared = SHARED_VIZ.get_or_init(|| Mutex::new(RenderCache::new()));

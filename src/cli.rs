@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub const HELP: &str = r#"cmrak — compile Markdown or source code to static HTML
 
 Usage: cmrak <compile> [OPTIONS] <INPUT> [OUTPUT]
+       cmrak svg <INPUT.mmd|INPUT.js> [OUTPUT.svg] [--root DIR]
        cmrak serve [INPUT --root DIR] [--site-root DIR] [--port PORT]
        cmrak stop
 
@@ -18,6 +19,7 @@ Options:
   -V, --version                      Show version
 
 Site resources are versioned under <site-root>/_shared/cmrak. Existing matching files are reused.
+Repository and documentation: https://github.com/jay-waves/cmrak
 Remote image URLs are preserved in all modes and loaded by the browser.
 Recognized source files (C/C++, BibTeX, Python, Lua, shell, JS/TS, Rust, etc.)
 are highlighted with highlight.js using the current code theme and fonts.
@@ -32,7 +34,15 @@ Chartist charts:
   network, canvas or timers. Give the SVG an accessible label.
   Optionally export hydrate(container) to add browser interaction to the existing
   SVG without redrawing it. Verify rendering and interactions in a browser.
+  Choose a Paul Tol Muted series color with className: 'tol-muted-rose'. Names:
+  indigo, cyan, teal, green, olive, sand, rose, wine, purple, grey.
   See the bundled examples/viz/ and README.md for examples.
+
+Direct SVG rendering:
+  cmrak svg charts/flow.mmd
+  cmrak svg charts/sales.js charts/sales.svg --root .
+  Accepts Mermaid .mmd sources and Chartist .js modules; output defaults to
+  the input path with an .svg extension.
 "#;
 
 #[derive(Clone, Copy, PartialEq, Debug)]

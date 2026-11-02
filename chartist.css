@@ -130,12 +130,15 @@
 #content .viz .ct-trend-line { stroke: var(--ct-color); }
 #content .viz .ct-target-line[class*="ct-series-"] { stroke: var(--ct-color); }
 #content .viz .ct-target-label[class*="ct-series-"] { fill: var(--ct-color); }
+#content .viz .ct-target-line[class*="tol-muted-"] { stroke: var(--ct-color); }
+#content .viz .ct-target-label[class*="tol-muted-"] { fill: var(--ct-color); }
 #content .viz .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
 #content .viz .ct-series-a .ct-value-label.ct-value-label-inside,
 #content .viz .ct-series-a.ct-value-label.ct-value-label-inside,
 #content .viz .ct-series-e .ct-value-label.ct-value-label-inside,
 #content .viz .ct-series-e.ct-value-label.ct-value-label-inside,
-#content .viz .ct-series-g .ct-value-label.ct-value-label-inside, .ct-series-g.ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+#content .viz .ct-series-g .ct-value-label.ct-value-label-inside,
+#content .viz .ct-series-g.ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
 
 #content .viz .ct-series-a { --ct-color: var(--viz-neutral-3); }
 #content .viz .ct-series-b { --ct-color: var(--viz-accent); }
@@ -153,3 +156,67 @@
 #content .viz .ct-area { fill: var(--ct-color); fill-opacity: .2; }
 #content .viz .ct-slice-pie { fill: var(--ct-color); stroke: var(--viz-paper); stroke-width: 1px; }
 #content .viz .ct-slice-donut { fill: none; stroke: var(--ct-color); stroke-width: 30px; }
+
+/* Paul Tol Muted: select a color with className: "tol-muted-rose". */
+.tol-muted-indigo { color: #332288; --ct-color: #332288; }
+.tol-muted-indigo .ct-line, .tol-muted-indigo .ct-point, .tol-muted-indigo .ct-bar, .tol-muted-indigo .ct-slice-donut, .tol-muted-indigo .ct-trend-line, .tol-muted-indigo.ct-line, .tol-muted-indigo.ct-point, .tol-muted-indigo.ct-bar, .tol-muted-indigo.ct-slice-donut, .tol-muted-indigo.ct-trend-line, .tol-muted-indigo.ct-target-line { stroke: #332288; }
+.tol-muted-indigo .ct-area, .tol-muted-indigo .ct-slice-pie, .tol-muted-indigo.ct-area, .tol-muted-indigo.ct-slice-pie, .tol-muted-indigo.ct-target-label { fill: #332288; }
+.tol-muted-indigo.ct-value-label.ct-value-label-inside, .tol-muted-indigo .ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+.tol-muted-cyan { color: #88ccee; --ct-color: #88ccee; }
+.tol-muted-cyan .ct-line, .tol-muted-cyan .ct-point, .tol-muted-cyan .ct-bar, .tol-muted-cyan .ct-slice-donut, .tol-muted-cyan .ct-trend-line, .tol-muted-cyan.ct-line, .tol-muted-cyan.ct-point, .tol-muted-cyan.ct-bar, .tol-muted-cyan.ct-slice-donut, .tol-muted-cyan.ct-trend-line, .tol-muted-cyan.ct-target-line { stroke: #88ccee; }
+.tol-muted-cyan .ct-area, .tol-muted-cyan .ct-slice-pie, .tol-muted-cyan.ct-area, .tol-muted-cyan.ct-slice-pie, .tol-muted-cyan.ct-target-label { fill: #88ccee; }
+.tol-muted-cyan.ct-value-label.ct-value-label-inside, .tol-muted-cyan .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-teal { color: #44aa99; --ct-color: #44aa99; }
+.tol-muted-teal .ct-line, .tol-muted-teal .ct-point, .tol-muted-teal .ct-bar, .tol-muted-teal .ct-slice-donut, .tol-muted-teal .ct-trend-line, .tol-muted-teal.ct-line, .tol-muted-teal.ct-point, .tol-muted-teal.ct-bar, .tol-muted-teal.ct-slice-donut, .tol-muted-teal.ct-trend-line, .tol-muted-teal.ct-target-line { stroke: #44aa99; }
+.tol-muted-teal .ct-area, .tol-muted-teal .ct-slice-pie, .tol-muted-teal.ct-area, .tol-muted-teal.ct-slice-pie, .tol-muted-teal.ct-target-label { fill: #44aa99; }
+.tol-muted-teal.ct-value-label.ct-value-label-inside, .tol-muted-teal .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-green { color: #117733; --ct-color: #117733; }
+.tol-muted-green .ct-line, .tol-muted-green .ct-point, .tol-muted-green .ct-bar, .tol-muted-green .ct-slice-donut, .tol-muted-green .ct-trend-line, .tol-muted-green.ct-line, .tol-muted-green.ct-point, .tol-muted-green.ct-bar, .tol-muted-green.ct-slice-donut, .tol-muted-green.ct-trend-line, .tol-muted-green.ct-target-line { stroke: #117733; }
+.tol-muted-green .ct-area, .tol-muted-green .ct-slice-pie, .tol-muted-green.ct-area, .tol-muted-green.ct-slice-pie, .tol-muted-green.ct-target-label { fill: #117733; }
+.tol-muted-green.ct-value-label.ct-value-label-inside, .tol-muted-green .ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+.tol-muted-olive { color: #999933; --ct-color: #999933; }
+.tol-muted-olive .ct-line, .tol-muted-olive .ct-point, .tol-muted-olive .ct-bar, .tol-muted-olive .ct-slice-donut, .tol-muted-olive .ct-trend-line, .tol-muted-olive.ct-line, .tol-muted-olive.ct-point, .tol-muted-olive.ct-bar, .tol-muted-olive.ct-slice-donut, .tol-muted-olive.ct-trend-line, .tol-muted-olive.ct-target-line { stroke: #999933; }
+.tol-muted-olive .ct-area, .tol-muted-olive .ct-slice-pie, .tol-muted-olive.ct-area, .tol-muted-olive.ct-slice-pie, .tol-muted-olive.ct-target-label { fill: #999933; }
+.tol-muted-olive.ct-value-label.ct-value-label-inside, .tol-muted-olive .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-sand { color: #ddcc77; --ct-color: #ddcc77; }
+.tol-muted-sand .ct-line, .tol-muted-sand .ct-point, .tol-muted-sand .ct-bar, .tol-muted-sand .ct-slice-donut, .tol-muted-sand .ct-trend-line, .tol-muted-sand.ct-line, .tol-muted-sand.ct-point, .tol-muted-sand.ct-bar, .tol-muted-sand.ct-slice-donut, .tol-muted-sand.ct-trend-line, .tol-muted-sand.ct-target-line { stroke: #ddcc77; }
+.tol-muted-sand .ct-area, .tol-muted-sand .ct-slice-pie, .tol-muted-sand.ct-area, .tol-muted-sand.ct-slice-pie, .tol-muted-sand.ct-target-label { fill: #ddcc77; }
+.tol-muted-sand.ct-value-label.ct-value-label-inside, .tol-muted-sand .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-rose { color: #cc6677; --ct-color: #cc6677; }
+.tol-muted-rose .ct-line, .tol-muted-rose .ct-point, .tol-muted-rose .ct-bar, .tol-muted-rose .ct-slice-donut, .tol-muted-rose .ct-trend-line, .tol-muted-rose.ct-line, .tol-muted-rose.ct-point, .tol-muted-rose.ct-bar, .tol-muted-rose.ct-slice-donut, .tol-muted-rose.ct-trend-line, .tol-muted-rose.ct-target-line { stroke: #cc6677; }
+.tol-muted-rose .ct-area, .tol-muted-rose .ct-slice-pie, .tol-muted-rose.ct-area, .tol-muted-rose.ct-slice-pie, .tol-muted-rose.ct-target-label { fill: #cc6677; }
+.tol-muted-rose.ct-value-label.ct-value-label-inside, .tol-muted-rose .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-wine { color: #882255; --ct-color: #882255; }
+.tol-muted-wine .ct-line, .tol-muted-wine .ct-point, .tol-muted-wine .ct-bar, .tol-muted-wine .ct-slice-donut, .tol-muted-wine .ct-trend-line, .tol-muted-wine.ct-line, .tol-muted-wine.ct-point, .tol-muted-wine.ct-bar, .tol-muted-wine.ct-slice-donut, .tol-muted-wine.ct-trend-line, .tol-muted-wine.ct-target-line { stroke: #882255; }
+.tol-muted-wine .ct-area, .tol-muted-wine .ct-slice-pie, .tol-muted-wine.ct-area, .tol-muted-wine.ct-slice-pie, .tol-muted-wine.ct-target-label { fill: #882255; }
+.tol-muted-wine.ct-value-label.ct-value-label-inside, .tol-muted-wine .ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+.tol-muted-purple { color: #aa4499; --ct-color: #aa4499; }
+.tol-muted-purple .ct-line, .tol-muted-purple .ct-point, .tol-muted-purple .ct-bar, .tol-muted-purple .ct-slice-donut, .tol-muted-purple .ct-trend-line, .tol-muted-purple.ct-line, .tol-muted-purple.ct-point, .tol-muted-purple.ct-bar, .tol-muted-purple.ct-slice-donut, .tol-muted-purple.ct-trend-line, .tol-muted-purple.ct-target-line { stroke: #aa4499; }
+.tol-muted-purple .ct-area, .tol-muted-purple .ct-slice-pie, .tol-muted-purple.ct-area, .tol-muted-purple.ct-slice-pie, .tol-muted-purple.ct-target-label { fill: #aa4499; }
+.tol-muted-purple.ct-value-label.ct-value-label-inside, .tol-muted-purple .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+.tol-muted-grey { color: #dddddd; --ct-color: #dddddd; }
+.tol-muted-grey .ct-line, .tol-muted-grey .ct-point, .tol-muted-grey .ct-bar, .tol-muted-grey .ct-slice-donut, .tol-muted-grey .ct-trend-line, .tol-muted-grey.ct-line, .tol-muted-grey.ct-point, .tol-muted-grey.ct-bar, .tol-muted-grey.ct-slice-donut, .tol-muted-grey.ct-trend-line, .tol-muted-grey.ct-target-line { stroke: #dddddd; }
+.tol-muted-grey .ct-area, .tol-muted-grey .ct-slice-pie, .tol-muted-grey.ct-area, .tol-muted-grey.ct-slice-pie, .tol-muted-grey.ct-target-label { fill: #dddddd; }
+.tol-muted-grey.ct-value-label.ct-value-label-inside, .tol-muted-grey .ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+
+/* Named colors also override the page-level default series variables. */
+#content .viz .tol-muted-indigo { --ct-color: #332288; }
+#content .viz .tol-muted-cyan { --ct-color: #88ccee; }
+#content .viz .tol-muted-teal { --ct-color: #44aa99; }
+#content .viz .tol-muted-green { --ct-color: #117733; }
+#content .viz .tol-muted-olive { --ct-color: #999933; }
+#content .viz .tol-muted-sand { --ct-color: #ddcc77; }
+#content .viz .tol-muted-rose { --ct-color: #cc6677; }
+#content .viz .tol-muted-wine { --ct-color: #882255; }
+#content .viz .tol-muted-purple { --ct-color: #aa4499; }
+#content .viz .tol-muted-grey { --ct-color: #dddddd; }
+#content .viz .tol-muted-indigo.ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+#content .viz .tol-muted-cyan.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-teal.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-green.ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+#content .viz .tol-muted-olive.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-sand.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-rose.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-wine.ct-value-label.ct-value-label-inside { fill: #ffffff; color: #ffffff; }
+#content .viz .tol-muted-purple.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }
+#content .viz .tol-muted-grey.ct-value-label.ct-value-label-inside { fill: #202020; color: #202020; }

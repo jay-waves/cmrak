@@ -113,6 +113,15 @@ standalone 内嵌本地图片，普通本地链接仍指向源文件。站点模
 
 ## Chartist 图表
 
+也可直接编译外部图表源码为 SVG：
+
+```sh
+cmrak svg charts/flow.mmd
+cmrak svg charts/sales.js charts/sales.svg --root .
+```
+
+输入只接受 `.mmd` 和 `.js`；省略输出路径时使用输入文件名并改为 `.svg`。JS 模块沿用 Chartist 图表的导入白名单及同步渲染限制，生成的 SVG 内嵌项目主题样式。
+
 在 Markdown 中使用完整标签，路径相对于当前文件：
 
 ```html
@@ -135,5 +144,7 @@ export default function render(container) {
 只支持导入 `chartist`、`chartist/server` 和 `@chartist-js/essentials`；路径须位于 `--root` 内。默认输出静态 SVG，可选导出 `hydrate(container)` 为浏览器添加交互。更多示例见 `examples/viz/`；旧版 D3 示例尚未迁移。
 
 Chartist 默认样式位于 `chartist.css`：图表使用正文衬线字体、紧凑线宽和柔和配色。可通过 `@chartist-js/essentials` 的 `axisTitle`、`valueLabels` 等图层添加坐标轴标题和数值标签；默认系列采用 Paul Tol Muted 配色。
+
+需要指定系列颜色时，可使用 Chartist 数据中的 `className`，例如 `series: [{ className: 'tol-muted-rose', data: [1, 3, 2] }]`。可用类名为 `tol-muted-` 加 `indigo`、`cyan`、`teal`、`green`、`olive`、`sand`、`rose`、`wine`、`purple` 或 `grey`。具名颜色也适用于趋势线和目标线（目标线使用其 `className` 选项）；浅灰适合辅助数据。未指定时继续使用默认系列顺序。
 
 独立编译使用 pulldown-cmark 事件流，不依赖 Comrak。标题仍生成原生 `<details>` 分节和兼容锚点；脚注在编译时生成为段落或表格后的原生 `<details>`，关闭 JavaScript 也可展开；启用脚本时隐藏脚注折叠标题和收起面板，仅点击正文上标开关段后脚注，沿用原有虚线边框样式，同段重复引用共用面板，不同段落分别生成，循环脚注保留为引用文字。数学推荐使用 `$…$` 和 `$$…$$`，不再解析 `\(…\)`、`\[…\]` 数学定界符。
