@@ -29,7 +29,18 @@ globalThis.renderFragment = (kind, source, language, index) => {
     const component = kind === 'diagram' ? 'Pele' : (kind === 'math' || kind === 'display') ? 'KaTeX' : 'highlight.js';
     const detail = error?.message || String(error);
     const name = error?.name && error.name !== 'Error' ? `${error.name}: ` : '';
-    return { error: `${component}: ${name}${detail}` };
+    let line = error?.line, column = error?.column;
+    if ((kind === 'math' || kind === 'display') && Number.isInteger(error?.position) && !source.includes('\u200b')) {
+      const before = source.slice(0, error.position);
+      line = before.split('\n').length;
+      column = before.length - before.lastIndexOf('\n');
+    }
+    const peleCode = ['syntax', 'semantic', 'unsupported-diagram', 'limit'].includes(error?.code) ? error.code : null;
+    const formatted = kind === 'diagram' ? detail.split(/\r?\n/).map((part, index) => index ? `  ${part}` : part).join('\n') : detail;
+    const prefix = kind === 'diagram' && peleCode ? `Pele ${peleCode}: ` : `${component}: ${name}`;
+    const location = Number.isInteger(line) && line > 0 && Number.isInteger(column) && column > 0
+      ? `\u001e${JSON.stringify({ line, column, source })}` : '';
+    return { error: `${prefix}${formatted}${location}` };
   }
 };
 

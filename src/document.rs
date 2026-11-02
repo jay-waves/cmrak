@@ -701,6 +701,80 @@ mod tests {
     }
 
     #[test]
+    fn fragment_errors_point_into_markdown_source() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(temp.path()).unwrap();
+        let attachments = Attachments::new(
+            &root.join("note.md"),
+            &root.join("out.html"),
+            root.clone(),
+            Images::Reference,
+            false,
+        )
+        .unwrap();
+        let engine = Engine::default();
+        for (source, expected) in [
+            (
+                "before\n\n<mermaid>\nsequenceDiagram\nAlice ->> Bob: hi\nfoo\n</mermaid>\n",
+                6,
+            ),
+            (
+                "before\n\n```mermaid\nsequenceDiagram\nAlice ->> Bob: hi\nfoo\n```\n",
+                6,
+            ),
+            ("before\n\n$x + \\invalidcommand$\n", 3),
+        ] {
+            let errors = render(source, &engine, &attachments).unwrap_err();
+            assert_eq!(errors[0].line, expected, "{errors:?}");
+            assert!(errors[0].column > 1, "{errors:?}");
+            assert!(!errors[0].message.contains('\u{1e}'));
+            if source.contains("mermaid") {
+                assert!(errors[0].message.starts_with("Pele syntax: "));
+                assert!(
+                    errors[0]
+                        .message
+                        .lines()
+                        .skip(1)
+                        .all(|line| line.starts_with("  "))
+                );
+            }
+        }
+        fs::write(
+            root.join("broken.mmd"),
+            "sequenceDiagram\nAlice ->> Bob: hi\nfoo\n",
+        )
+        .unwrap();
+        let errors = render(
+            "<mermaid src=\"broken.mmd\"></mermaid>\n",
+            &engine,
+            &attachments,
+        )
+        .unwrap_err();
+        let first = errors[0].message.lines().next().unwrap();
+        assert!(
+            first.contains("broken.mmd") && first.contains("fragment line 3, column 4"),
+            "{errors:?}"
+        );
+        assert!(
+            errors[0]
+                .message
+                .lines()
+                .skip(1)
+                .all(|line| line.starts_with("  "))
+        );
+        let errors = render(
+            "<mermaid>xychart-beta\ntitle test</mermaid>\n",
+            &engine,
+            &attachments,
+        )
+        .unwrap_err();
+        assert!(
+            errors[0].message.starts_with("Pele semantic: "),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
     fn native_graphs_preserve_context_and_diagnostics() {
         let temp = tempfile::tempdir().unwrap();
         let root = dunce::canonicalize(temp.path()).unwrap();

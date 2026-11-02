@@ -55,6 +55,7 @@ pub(crate) fn render(
         engine,
         attachments,
         warnings,
+        source,
         starts,
         ids: IdState::default(),
         graph_ids: GraphIds::default(),
@@ -73,6 +74,7 @@ struct Renderer<'a> {
     engine: &'a Engine,
     attachments: &'a Attachments,
     warnings: &'a mut Vec<Diagnostic>,
+    source: &'a str,
     starts: Vec<usize>,
     ids: IdState,
     graph_ids: GraphIds,
@@ -95,6 +97,7 @@ impl Renderer<'_> {
         offset: usize,
         result: Result<Option<String>, String>,
         block: bool,
+        range: &Range<usize>,
     ) -> Ev {
         match result {
             Ok(Some(html)) => raw(if block {
@@ -104,10 +107,68 @@ impl Renderer<'_> {
             }),
             Ok(None) => raw(""),
             Err(message) => {
+                let (offset, message) = self.fragment_error(offset, range, message);
                 let error = self.diag(offset, message);
                 self.errors.push(error);
                 raw("")
             }
+        }
+    }
+    fn fragment_error(
+        &self,
+        fallback: usize,
+        range: &Range<usize>,
+        message: String,
+    ) -> (usize, String) {
+        let Some((message, metadata)) = message.rsplit_once('\u{1e}') else {
+            return (fallback, message);
+        };
+        let Ok(data) = serde_json::from_str::<serde_json::Value>(metadata) else {
+            return (fallback, message.to_owned());
+        };
+        let (Some(fragment), Some(line), Some(column)) = (
+            data["source"].as_str(),
+            data["line"].as_u64(),
+            data["column"].as_u64(),
+        ) else {
+            return (fallback, message.to_owned());
+        };
+        let position = || {
+            let part = fragment
+                .split('\n')
+                .nth(usize::try_from(line).ok()?.checked_sub(1)?)?;
+            let line_start = part.as_ptr() as usize - fragment.as_ptr() as usize;
+            let units = usize::try_from(column).ok()?.checked_sub(1)?;
+            let mut consumed = 0;
+            let mut bytes = 0;
+            for ch in part.chars() {
+                if consumed >= units {
+                    break;
+                }
+                consumed += ch.len_utf16();
+                bytes += ch.len_utf8();
+            }
+            if consumed != units {
+                return None;
+            }
+            let block = self.source.get(range.clone())?;
+            let start = block.find(fragment)?;
+            if block[start + fragment.len()..].contains(fragment) {
+                return None;
+            }
+            Some(range.start + start + line_start + bytes)
+        };
+        match position() {
+            Some(at) => (at, message.to_owned()),
+            None => (
+                fallback,
+                match message.split_once('\n') {
+                    Some((first, details)) => {
+                        format!("{first} (fragment line {line}, column {column})\n{details}")
+                    }
+                    None => format!("{message} (fragment line {line}, column {column})"),
+                },
+            ),
         }
     }
     fn events(&mut self, events: &[Located], sections: bool) -> Vec<Ev> {
@@ -203,7 +264,7 @@ impl Renderer<'_> {
                         } else {
                             result
                         };
-                        out.push(self.compiled(offset, result, true));
+                        out.push(self.compiled(offset, result, true, range));
                     } else if fragments::graph_tag_name(&text).is_some() {
                         let id = self.graph_ids.for_identity(text.trim().to_owned());
                         let result = fragments::render_graph_tag(
@@ -213,7 +274,7 @@ impl Renderer<'_> {
                             id,
                             false,
                         );
-                        out.push(self.compiled(offset, result, true));
+                        out.push(self.compiled(offset, result, true, range));
                     } else {
                         out.push(self.html(&text, offset, true));
                     }
@@ -264,7 +325,7 @@ impl Renderer<'_> {
                         "",
                         cursor,
                     );
-                    out.push(self.compiled(offset, result, block));
+                    out.push(self.compiled(offset, result, block, range));
                 }
                 Event::Html(text) | Event::InlineHtml(text) => {
                     if text.starts_with("<details class=\"inline-footnote\"") {
@@ -489,7 +550,7 @@ impl Renderer<'_> {
             let error = self.diag(offset + at, message);
             self.warnings.push(error);
         }
-        self.compiled(offset, result.map(Some), block)
+        self.compiled(offset, result.map(Some), block, &(offset..offset))
     }
 }
 
