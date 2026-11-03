@@ -47,6 +47,13 @@ fn compile_svg(arguments: &[String]) -> Result<(), String> {
             .map_err(|e| format!("Chartist: {e}"))?,
         _ => return Err("cmrak svg accepts only .mmd and .js input files".into()),
     };
+
+    // Standalone SVGs cannot inherit the HTML document's theme.
+    let svg = if extension.eq_ignore_ascii_case("mmd") {
+        svg.replacen("style=\"", "style=\"color-scheme:light dark;--pele-bg:light-dark(#fdfdfc,#212830);--pele-fg:light-dark(#363733,#f0f6fc);--pele-muted:light-dark(#73746e,#9198a1);--pele-line:light-dark(#73746e,#9198a1);--pele-surface:light-dark(#f4f5f4,#262c36);--pele-surface-alt:light-dark(#e9ecea,#3d444d);--pele-border:light-dark(#73746e,#9198a1);--pele-accent:light-dark(#777c78,#478be6);", 1)
+    } else {
+        svg
+    };
     let output = positional
         .get(1)
         .cloned()
