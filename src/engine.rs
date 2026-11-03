@@ -64,42 +64,26 @@ impl Renderer {
                 .catch(&ctx)
                 .map_err(|e| format!("cannot initialize embedded renderers: {e}"))
         })?;
-        context
-            .with(|ctx| {
-                Module::declare(
-                    ctx.clone(),
-                    "chartist",
-                    include_str!("../generated/chartist-module.js"),
-                )?
-                .eval()?
-                .1
-                .finish::<()>()
-            })
-            .map_err(|e| format!("cannot initialize Chartist module: {e}"))?;
-        context
-            .with(|ctx| {
-                Module::declare(
-                    ctx.clone(),
-                    "chartist/server",
-                    include_str!("../generated/chartist-server-module.js"),
-                )?
-                .eval()?
-                .1
-                .finish::<()>()
-            })
-            .map_err(|e| format!("cannot initialize Chartist server module: {e}"))?;
-        context
-            .with(|ctx| {
-                Module::declare(
-                    ctx.clone(),
-                    "@chartist-js/essentials",
-                    include_str!("../generated/chartist-essentials-module.js"),
-                )?
-                .eval()?
-                .1
-                .finish::<()>()
-            })
-            .map_err(|e| format!("cannot initialize Chartist essentials module: {e}"))?;
+        for (name, source) in [
+            ("chartist", include_str!("../generated/chartist-module.js")),
+            (
+                "chartist/server",
+                include_str!("../generated/chartist-server-module.js"),
+            ),
+            (
+                "@chartist-js/essentials",
+                include_str!("../generated/chartist-essentials-module.js"),
+            ),
+        ] {
+            context
+                .with(|ctx| {
+                    Module::declare(ctx.clone(), name, source)?
+                        .eval()?
+                        .1
+                        .finish::<()>()
+                })
+                .map_err(|e| format!("cannot initialize {name} module: {e}"))?;
+        }
         Ok(Self {
             context,
             _runtime: runtime,
@@ -141,11 +125,8 @@ impl Engine {
             .ok_or("Chartist returned invalid SVG")?
             + "</svg>".len();
         let svg = &markup[start..end];
-        let styles = format!(
-            "{}\n{}",
-            include_str!("../generated/chartist.css"),
-            include_str!("../chartist.css")
-        );
+        // The asset builder already includes the chart theme in this stylesheet.
+        let styles = include_str!("../generated/chartist.css");
         let insert = svg.find('>').ok_or("Chartist returned invalid SVG")? + 1;
         Ok(format!(
             "{}<style>{}</style>{}",

@@ -26,6 +26,7 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
+      - run: npm test
       - run: npm run build:cmrak-assets
       - run: cargo fmt -p cmrak --check
       - run: cargo test --release --locked -p cmrak
@@ -78,6 +79,7 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
+      - run: npm test
       - run: npm run build:cmrak-assets
       - run: cargo fmt -p cmrak --check
       - run: cargo test --release --locked -p cmrak

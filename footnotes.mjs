@@ -25,7 +25,10 @@ export function prepareFootnotes(root) {
     else {
       open(note);
       for (let parent = note; parent; parent = parent.parentElement) {
-        if (parent.tagName === 'DETAILS') parent.open = true;
+        if (parent.tagName === 'DETAILS') {
+          parent.open = true;
+          if (parent.matches('details.inline-footnote')) sync(parent);
+        }
       }
     }
     sync(note);

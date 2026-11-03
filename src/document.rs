@@ -471,11 +471,6 @@ pub(crate) fn compile_document(
             .and_then(|s| s.to_str())
             .unwrap_or("Document")
     });
-    let html = format!(
-        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"generator\" content=\"cmrak {}\"><title>{}</title>\n{stylesheet}\n{viz_style}\n{mermaid_style}\n{viz_runtime}\n</head><body><main id=\"content\">\n{body}</main></body></html>\n",
-        env!("CARGO_PKG_VERSION"),
-        escape(title)
-    );
     let navigation = if let Some(directory) = site_assets.as_deref() {
         let path = dunce::canonicalize(
             directory
@@ -493,7 +488,11 @@ pub(crate) fn compile_document(
             include_str!("../generated/navigation.js")
         )
     };
-    let html = html.replace("</body>", &format!("{navigation}</body>"));
+    let html = format!(
+        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"generator\" content=\"cmrak {}\"><title>{}</title>\n{stylesheet}\n{viz_style}\n{mermaid_style}\n{viz_runtime}\n</head><body><main id=\"content\">\n{body}</main>{navigation}</body></html>\n",
+        env!("CARGO_PKG_VERSION"),
+        escape(title)
+    );
     let html = if let Some(site) = &args.site_root {
         crate::site::rewrite(
             &html,

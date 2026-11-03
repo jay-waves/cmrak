@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build:cmrak-assets": "node scripts/build-cmrak-assets.mjs",
-    "package:cmrak": "node scripts/package-cmrak.mjs"
+    "package:cmrak": "node scripts/package-cmrak.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@chartist-js/essentials": "2.2.0",

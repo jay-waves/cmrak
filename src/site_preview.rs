@@ -494,11 +494,8 @@ fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
             "HTTP/1.1 304 Not Modified\r\nETag: \"{etag}\"\r\nCache-Control: {cache}\r\nConnection: close\r\n\r\n"
         );
     }
+    let mut content_length = body.len();
     if html {
-        let index = body
-            .windows(7)
-            .rposition(|b| b.eq_ignore_ascii_case(b"</body>"))
-            .unwrap_or(body.len());
         let revision = serde_json::to_string(&format!("\"{etag}\"")).unwrap();
         let event_revision =
             serde_json::to_string(notification(root, &file)["revision"].as_str().unwrap_or(""))
@@ -506,13 +503,20 @@ fn respond(mut stream: TcpStream, root: &Path) -> std::io::Result<()> {
         let script = RELOAD
             .replace("__ETAG__", &revision)
             .replace("__REVISION__", &event_revision);
-        body.splice(index..index, script.bytes());
+        content_length += script.len();
+        if method == "GET" {
+            let index = body
+                .windows(7)
+                .rposition(|b| b.eq_ignore_ascii_case(b"</body>"))
+                .unwrap_or(body.len());
+            body.splice(index..index, script.bytes());
+        }
     }
     let mime = mime_guess::from_path(&file).first_or_octet_stream();
     write!(
         stream,
         "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nContent-Length: {}\r\nETag: \"{etag}\"\r\nCache-Control: {cache}\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
-        body.len()
+        content_length
     )?;
     if method == "GET" {
         stream.write_all(&body)?;

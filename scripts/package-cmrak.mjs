@@ -1,4 +1,4 @@
-import { mkdir, cp, rm } from 'node:fs/promises';
+import { mkdir, cp, rm, readdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -20,7 +20,7 @@ await cp(resolve(root, 'README.md'), resolve(output, 'README.md'));
 await rm(resolve(output, 'AGENTS.md'), { force: true });
 await cp(resolve(root, 'examples'), resolve(output, 'examples'), { recursive: true });
 await cp(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
-for (const name of ['KaTeX-LICENSE', 'highlight.js-LICENSE', 'Pele-LICENSE', 'Chartist-LICENSE', 'Chartist-Essentials-LICENSE', 'LinkeDOM-LICENSE', 'FormatJS-LICENSE']) {
+for (const name of (await readdir(resolve(root, 'generated'))).filter(name => name.endsWith('-LICENSE')).sort()) {
   await cp(resolve(root, 'generated', name), resolve(output, name));
 }
 console.log(`Standalone executable: ${resolve(output, `cmrak${suffix}`)}`);
