@@ -16,6 +16,7 @@ globalThis.renderFragment = (kind, source, language, index) => {
       });
     } else if (kind === 'diagram') {
       html = render(source, {
+        fontFamily: "Georgia, Source Han Serif, Noto Serif CJK SC, Libertinus Serif, New Computer Modern, serif",
         idPrefix: `diagram-${index}`, autoDirection: false, maxWidth: 900,
         // Diagram image attachments require their own asset traversal; do not
         // silently leave unmanaged images in an otherwise standalone document.

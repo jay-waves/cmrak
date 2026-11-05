@@ -1,6 +1,6 @@
 #content .diagram { margin: 1.5rem 0; overflow-x: auto; }
-:is(#content .diagram, .diagram-view) svg { display: block; max-width: 100%; height: auto; margin: auto; font-family: var(--md-font-sans) !important; font-size: 12px !important; }
-:is(#content .diagram, .diagram-view) svg text { font-family: var(--md-font-sans) !important; font-size: 12px !important; }
+:is(#content .diagram, .diagram-view) svg { display: block; max-width: 100%; height: auto; margin: auto; font-family: var(--md-font) !important; }
+:is(#content .diagram, .diagram-view) svg text { font-family: var(--md-font) !important; }
 #content .graph-figure .diagram { margin: 0; }
 #content .graph-figure .diagram svg { width: 100%; }
 
@@ -14,7 +14,7 @@
   --pele-surface-alt: var(--md-code-bg);
   --pele-border: var(--md-muted);
   --pele-accent: var(--md-accent);
-  --pele-font: var(--md-font-sans);
+  --pele-font: var(--md-font);
   --pele-font-mono: var(--md-font-mono);
   max-width: 100%;
   height: auto;
