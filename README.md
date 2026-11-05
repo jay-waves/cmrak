@@ -148,3 +148,28 @@ Chartist 默认样式位于 `chartist.css`：图表使用正文衬线字体、�
 需要指定系列颜色时，可使用 Chartist 数据中的 `className`，例如 `series: [{ className: 'tol-muted-rose', data: [1, 3, 2] }]`。可用类名为 `tol-muted-` 加 `indigo`、`cyan`、`teal`、`green`、`olive`、`sand`、`rose`、`wine`、`purple` 或 `grey`。具名颜色也适用于趋势线和目标线（目标线使用其 `className` 选项）；浅灰适合辅助数据。未指定时继续使用默认系列顺序。
 
 独立编译使用 pulldown-cmark 事件流，不依赖 Comrak。标题仍生成原生 `<details>` 分节和兼容锚点；脚注在编译时生成为段落或表格后的原生 `<details>`，关闭 JavaScript 也可展开；启用脚本时隐藏脚注折叠标题和收起面板，仅点击正文上标开关段后脚注，沿用原有虚线边框样式，同段重复引用共用面板，不同段落分别生成，循环脚注保留为引用文字。数学推荐使用 `$…$` 和 `$$…$$`，不再解析 `\(…\)`、`\[…\]` 数学定界符。
+
+## One-command install or update
+
+Always downloads and replaces the current executable from the maintained release (Linux x86_64 / Windows x64). The default installation requires no administrator privileges.
+
+Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jay-waves/cmrak/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/jay-waves/cmrak/main/install.ps1 | iex
+```
+
+Linux installs into `~/.local/bin`; Windows installs into `%LOCALAPPDATA%/Programs/cmrak`. Neither script modifies PATH; add the installation directory yourself if needed. Set `INSTALL_DIR` to override the destination. The release tag is updated in place by CI, so rerunning downloads the newest published build even when the version number stays the same.
+
+To choose a Windows destination while using `iex`:
+
+```powershell
+$env:INSTALL_DIR = 'D:\Tools'
+irm https://raw.githubusercontent.com/jay-waves/cmrak/main/install.ps1 | iex
+```
