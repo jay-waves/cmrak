@@ -48,6 +48,8 @@ pub struct Attachments {
     site: bool,
     root: PathBuf,
     mode: Images,
+    allow_missing_images: bool,
+    missing_images: RefCell<Vec<String>>,
     private: Option<PathBuf>,
     dependencies: Rc<RefCell<HashSet<PathBuf>>>,
     site_root: Option<PathBuf>,
@@ -65,6 +67,8 @@ impl Attachments {
         Ok(Self {
             input: assets::file_url(input)?,
             site: false,
+            allow_missing_images: false,
+            missing_images: RefCell::default(),
             root,
             mode,
             private: None,
@@ -179,6 +183,7 @@ impl Attachments {
             let output =
                 crate::site::page_path(&site.join(input.strip_prefix(&self.root).unwrap()));
             let args = Args {
+                allow_missing_images: false,
                 input: input.clone(),
                 output: output.clone(),
                 root: Some(self.root.clone()),
@@ -213,6 +218,16 @@ impl Attachments {
         Ok(Some(target.to_string()))
     }
 
+    pub(crate) fn take_image_warnings(&self) -> Vec<String> {
+        self.missing_images
+            .borrow_mut()
+            .drain(..)
+            .map(|original| {
+                format!("attachment {original:?} is missing; preserving image reference")
+            })
+            .collect()
+    }
+
     pub fn resolve(&self, original: &str, image: bool) -> Result<String, String> {
         if image {
             self.track(original);
@@ -238,11 +253,16 @@ impl Attachments {
         let path = url
             .to_file_path()
             .map_err(|_| format!("invalid local path {original:?}"))?;
+        let mut missing = false;
         let path = match dunce::canonicalize(&path) {
             Ok(path) => path,
             // Links do not read their target; allow documents to reference files
             // that will be supplied later. Images still require an existing file.
-            Err(error) if !image && error.kind() == std::io::ErrorKind::NotFound => {
+            Err(error)
+                if (!image || self.allow_missing_images)
+                    && error.kind() == std::io::ErrorKind::NotFound =>
+            {
+                missing = image;
                 resolve_missing_link(&path)
                     .map_err(|e| format!("cannot resolve attachment {original:?}: {e}"))?
             }
@@ -263,6 +283,13 @@ impl Attachments {
             .is_some_and(|private| path.starts_with(private))
         {
             return Err("application data is private".into());
+        }
+        if missing {
+            self.missing_images.borrow_mut().push(original.to_owned());
+            let mut target = assets::file_url(&path)?;
+            target.set_query(url.query());
+            target.set_fragment(url.fragment());
+            return Ok(target.to_string());
         }
         if image && !path.is_file() {
             return Err(format!("image {original:?} is not a file"));
@@ -433,6 +460,7 @@ pub(crate) fn compile_document(
     let asset_dir = site_assets.as_deref().or(args.asset_dir.as_deref());
     let mut attachments =
         Attachments::new(&input, &output, root, args.images, args.standalone).map_err(failure)?;
+    attachments.allow_missing_images = args.allow_missing_images;
     attachments.site = args.site_root.is_some();
     attachments.site_root = args
         .site_root
@@ -515,6 +543,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn missing_image_warnings_point_to_each_use() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("note.md");
+        fs::write(&input, "missing.png is mentioned here.\n\n![one](missing.png)\n\n![two](missing.png)\n\n<img src=\"a&amp;b.png\">\n\n<img srcset=\"small.png 1x, large.png 2x\">\n").unwrap();
+        let mut args = crate::cli::parse([
+            input.to_string_lossy().into_owned(),
+            "--root".into(),
+            temp.path().to_string_lossy().into_owned(),
+            "--allow-missing-images".into(),
+        ])
+        .unwrap()
+        .unwrap();
+        let warnings = compile_document(&args, &Engine::default(), Rc::default()).unwrap();
+        assert_eq!(
+            warnings
+                .iter()
+                .map(|d| (d.line, d.column))
+                .collect::<Vec<_>>(),
+            [(3, 1), (5, 1), (7, 1), (9, 1), (9, 1)]
+        );
+        assert!(warnings.iter().all(|d| d.message.contains("is missing")));
+        assert!(warnings[2].message.contains("a&b.png"));
+        let html = fs::read(&args.output).unwrap();
+        args.allow_missing_images = false;
+        assert!(compile_document(&args, &Engine::default(), Rc::default()).is_err());
+        assert_eq!(fs::read(&args.output).unwrap(), html);
+    }
+
+    #[test]
     fn source_files_compile_with_highlighting_without_markdown_interpretation() {
         let temp = tempfile::tempdir().unwrap();
         let cases = [
@@ -533,6 +590,7 @@ mod tests {
             let input = temp.path().join(name);
             fs::write(&input, source).unwrap();
             let args = Args {
+                allow_missing_images: false,
                 input,
                 output: temp.path().join(format!("{name}.html")),
                 root: Some(temp.path().to_path_buf()),
@@ -596,6 +654,7 @@ mod tests {
         )
         .unwrap();
         let args = Args {
+            allow_missing_images: false,
             site_root: None,
             input: input.clone(),
             output: root.join("out.html"),
@@ -671,6 +730,7 @@ mod tests {
         let input = root.join("note.md");
         fs::write(&input, "Intro\n\n[local](file:///elsewhere/note.pdf)\n\n<a href=\"file:///elsewhere/a.pdf\">raw</a>\n").unwrap();
         let args = Args {
+            allow_missing_images: false,
             input,
             output: root.join("site/note/index.html"),
             root: Some(root.clone()),
@@ -1014,6 +1074,7 @@ export default function(container) {
         let output = root.join("Temp/nvim-compile/speech.html");
         fs::write(&input, "<figure>\n  <img src=\"../assets/vision/waveform-spectrogram.webp\">\n  <figcaption>Source: <a href=\"https://speechprocessingbook.aalto.fi/representations/spectrogram-and-the-stft/\">Tom Bäckström</a>, Waveform &amp; Spectrogram</figcaption>\n</figure>\n").unwrap();
         let args = Args {
+            allow_missing_images: false,
             site_root: None,
             input,
             output: output.clone(),
@@ -1045,6 +1106,7 @@ export default function(container) {
         )
         .unwrap();
         let mut args = Args {
+            allow_missing_images: false,
             site_root: None,
             input: input.clone(),
             output: output.clone(),

@@ -11,6 +11,7 @@ Options:
   -o, --output <PATH>                 Output HTML (default: input with .html)
       --root <DIR>                    Allowed local attachment root (default: current directory)
       --images <reference|embed>  Local image handling (default: embed; reference in site mode)
+      --allow-missing-images          Warn and continue when local images are missing
       --standalone                    Inline CSS, fonts and local images (default)
       --site-root <DIR>               Site output directory (typically _site); preserve root-relative paths
       --color <never|auto>             Output color (default: never)
@@ -58,6 +59,7 @@ pub struct Args {
     pub output: PathBuf,
     pub root: Option<PathBuf>,
     pub images: Images,
+    pub allow_missing_images: bool,
     pub standalone: bool,
     pub asset_dir: Option<PathBuf>,
     pub title: Option<String>,
@@ -73,6 +75,7 @@ pub fn parse(values: impl IntoIterator<Item = String>) -> Result<Option<Args>, S
     let mut root = None;
     let mut images = Images::Reference;
     let mut standalone = false;
+    let mut allow_missing_images = false;
     let mut site_root = None;
     let mut asset_dir = None;
     let mut title = None;
@@ -106,6 +109,7 @@ pub fn parse(values: impl IntoIterator<Item = String>) -> Result<Option<Args>, S
             "--root" => root = Some(PathBuf::from(argument()?)),
             "--asset-dir" => asset_dir = Some(PathBuf::from(argument()?)),
             "--title" => title = Some(argument()?),
+            "--allow-missing-images" if inline.is_none() => allow_missing_images = true,
             "--standalone" if inline.is_none() => standalone = true,
             "--color" => match argument()?.as_str() {
                 "never" | "auto" => {}
@@ -161,6 +165,7 @@ pub fn parse(values: impl IntoIterator<Item = String>) -> Result<Option<Args>, S
         output
     };
     Ok(Some(Args {
+        allow_missing_images,
         site_root,
         input,
         output,

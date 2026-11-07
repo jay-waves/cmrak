@@ -1,7 +1,21 @@
 use cmrak::{cli, document};
-use std::{fs, path::PathBuf};
+use std::{fs, io::Write, path::PathBuf};
 
 fn compile_svg(arguments: &[String]) -> Result<(), String> {
+    // Like document::compile, reserve a native stack larger than QuickJS's
+    // 4 MiB budget. Standalone SVG compilation also initializes the JS bundles.
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .name("cmrak-svg-compiler".into())
+            .stack_size(16 * 1024 * 1024)
+            .spawn_scoped(scope, || compile_svg_on_worker(arguments))
+            .map_err(|error| format!("cannot start SVG compiler thread: {error}"))?
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+    })
+}
+
+fn compile_svg_on_worker(arguments: &[String]) -> Result<(), String> {
     let mut positional = Vec::new();
     let mut root = None;
     let mut args = arguments.iter();
@@ -34,6 +48,13 @@ fn compile_svg(arguments: &[String]) -> Result<(), String> {
     if !input.starts_with(&root) {
         return Err("input is outside --root".into());
     }
+    let output = positional
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| input.with_extension("svg"));
+    if fs::canonicalize(&output).ok().as_ref() == Some(&input) {
+        return Err("output would overwrite the input".into());
+    }
     let extension = input.extension().and_then(|ext| ext.to_str()).unwrap_or("");
     let source =
         fs::read_to_string(&input).map_err(|e| format!("cannot read {}: {e}", input.display()))?;
@@ -54,11 +75,17 @@ fn compile_svg(arguments: &[String]) -> Result<(), String> {
     } else {
         svg
     };
-    let output = positional
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| input.with_extension("svg"));
-    fs::write(&output, svg).map_err(|e| format!("cannot write {}: {e}", output.display()))
+    // Replace only after a complete write; preserve existing output on failure
+    // and do not follow output hard links when writing SVG bytes.
+    let output = std::path::absolute(&output).map_err(|e| e.to_string())?;
+    let parent = output.parent().ok_or("output must be a file")?;
+    let write = || -> std::io::Result<()> {
+        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+        temporary.write_all(svg.as_bytes())?;
+        temporary.persist(&output).map_err(|e| e.error)?;
+        Ok(())
+    };
+    write().map_err(|e| format!("cannot write {}: {e}", output.display()))
 }
 
 fn is_source_diagnostic(message: &str) -> bool {
@@ -172,6 +199,76 @@ fn main() -> std::process::ExitCode {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn svg_output_preserves_sources_and_previous_output() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("flow.mmd");
+        let output = temp.path().join("flow.svg");
+        let source = "flowchart LR\n Start --> End\n";
+        let compile = |output: &std::path::Path| {
+            super::compile_svg(&[
+                input.to_string_lossy().into_owned(),
+                output.to_string_lossy().into_owned(),
+                "--root".into(),
+                temp.path().to_string_lossy().into_owned(),
+            ])
+        };
+        std::fs::write(&input, source).unwrap();
+        assert!(compile(&input).unwrap_err().contains("overwrite the input"));
+        assert_eq!(std::fs::read_to_string(&input).unwrap(), source);
+
+        #[cfg(unix)]
+        {
+            let alias = temp.path().join("alias.svg");
+            std::os::unix::fs::symlink(&input, &alias).unwrap();
+            assert!(compile(&alias).unwrap_err().contains("overwrite the input"));
+        }
+        std::fs::hard_link(&input, &output).unwrap();
+        compile(&output).unwrap();
+        assert_eq!(std::fs::read_to_string(&input).unwrap(), source);
+        let previous = std::fs::read(&output).unwrap();
+        assert!(String::from_utf8_lossy(&previous).contains("<svg"));
+        std::fs::write(&input, "not a diagram").unwrap();
+        assert!(compile(&output).is_err());
+        assert_eq!(std::fs::read(&output).unwrap(), previous);
+    }
+
+    #[test]
+    fn svg_compilation_does_not_depend_on_callers_stack_size() {
+        std::thread::Builder::new()
+            .stack_size(512 * 1024)
+            .spawn(|| {
+                let temp = tempfile::tempdir().unwrap();
+                for (name, source, marker) in [
+                    ("flow.mmd", "flowchart LR\n Start --> End\n", "Start"),
+                    (
+                        "sequence.mmd",
+                        "sequenceDiagram\n Alice->>Bob: Hello\n",
+                        "Alice",
+                    ),
+                    (
+                        "chart.js",
+                        include_str!("../examples/viz/bars.js"),
+                        "ct-bar",
+                    ),
+                ] {
+                    let input = temp.path().join(name);
+                    std::fs::write(&input, source).unwrap();
+                    super::compile_svg(&[
+                        input.to_str().unwrap().to_owned(),
+                        "--root".into(),
+                        temp.path().to_str().unwrap().to_owned(),
+                    ])
+                    .unwrap();
+                    let svg = std::fs::read_to_string(input.with_extension("svg")).unwrap();
+                    assert!(svg.contains("<svg") && svg.contains(marker), "{name}");
+                }
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+
     #[test]
     fn source_diagnostics_remain_parseable() {
         assert!(super::is_source_diagnostic(

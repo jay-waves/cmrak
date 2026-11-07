@@ -59,6 +59,14 @@ jobs:
           foreach ($marker in @('katex', 'hljs-keyword', '<svg', 'license.md')) {
             if (-not $html.Contains($marker)) { throw "Missing rendered marker: $marker" }
           }
+          foreach ($diagram in @("flowchart LR`n A --> B", "sequenceDiagram`n Alice->>Bob: Hello")) {
+            $diagramPath = Join-Path $env:RUNNER_TEMP 'cmrak-smoke.mmd'
+            $svgPath = Join-Path $env:RUNNER_TEMP 'cmrak-smoke.svg'
+            $diagram | Set-Content -Encoding utf8 $diagramPath
+            & ./release/cmrak-win32-x64/cmrak.exe svg $diagramPath $svgPath --root $env:RUNNER_TEMP
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            if (-not (Get-Content -Raw $svgPath).Contains('<svg')) { throw 'Missing standalone SVG' }
+          }
       - uses: actions/upload-artifact@v7
         with:
           name: cmrak-windows-x64

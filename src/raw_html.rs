@@ -180,6 +180,9 @@ fn rewrite_impl(
             } else {
                 None
             };
+            for message in attachments.take_image_warnings() {
+                warnings.push((start, message));
+            }
             if let Some(value) = rewritten {
                 result.push_str(&html[unchanged..value_start]);
                 result.push('"');

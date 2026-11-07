@@ -404,6 +404,10 @@ impl Renderer<'_> {
                             out.push(event.clone());
                         }
                     }
+                    for message in self.attachments.take_image_warnings() {
+                        let warning = self.diag(offset, message);
+                        self.warnings.push(warning);
+                    }
                     depth += 1;
                     image_depth += 1;
                 }
