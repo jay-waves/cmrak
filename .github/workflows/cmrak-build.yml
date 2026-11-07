@@ -1,4 +1,4 @@
-name: Build and update cmrak 0.5.0
+name: Build and publish cmrak rolling release
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cmrak-release-0.5.0
+  group: cmrak-release-rolling
   cancel-in-progress: true
 
 permissions:
@@ -128,7 +128,7 @@ jobs:
 
 
   release:
-    name: Update 0.5.0 release
+    name: Publish rolling release
     needs: [linux, windows]
     runs-on: ubuntu-latest
     permissions:
@@ -151,17 +151,24 @@ jobs:
           cp release-linux/cmrak release-assets/cmrak-linux-x64
           cp release-windows/cmrak.exe release-assets/cmrak-windows-x64.exe
           cp release-linux/LICENSE release-linux/*-LICENSE release-assets/
-      - name: Point 0.5.0 tag at this build
-        run: |
-          git tag --force 0.5.0 "$GITHUB_SHA"
-          git push --force origin refs/tags/0.5.0
-      - name: Create or update release assets
+      - name: Publish current build and remove previous releases
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          if gh release view 0.5.0 >/dev/null 2>&1; then
-            gh release edit 0.5.0 --title 'cmrak 0.5.0' --notes "Built from commit $GITHUB_SHA."
-          else
-            gh release create 0.5.0 --verify-tag --title 'cmrak 0.5.0' --notes "Built from commit $GITHUB_SHA."
+          set -euo pipefail
+          tag="rolling-$(date -u +%Y%m%d)-${GITHUB_SHA:0:6}"
+          printf 'Built from commit %s.\nPackage version: 0.5.0.\n' "$GITHUB_SHA" > release-notes.txt
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "cmrak $tag" --notes-file release-notes.txt
           fi
-          gh release upload 0.5.0 release-assets/* --clobber
+          gh release upload "$tag" release-assets/* --clobber
+          gh release edit "$tag" --draft=false --latest --title "cmrak $tag" --notes-file release-notes.txt
+
+          # Keep the previous download available until the new release is complete.
+          releases=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name')
+          while IFS= read -r old; do
+            if [[ "$old" != "$tag" && ( "$old" == "0.5.0" || "$old" == "rolling" || "$old" =~ ^rolling-[0-9]{8}-[0-9a-f]{6}$ ) ]]; then
+              gh release delete "$old" --yes --cleanup-tag
+            fi
+          done <<< "$releases"

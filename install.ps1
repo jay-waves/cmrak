@@ -6,7 +6,7 @@ $target = Join-Path $installDir 'cmrak.exe'
 $temp = Join-Path $installDir ([IO.Path]::GetRandomFileName())
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -UseBasicParsing -Headers @{ 'Cache-Control' = 'no-cache' } -Uri 'https://github.com/jay-waves/cmrak/releases/download/0.5.0/cmrak-windows-x64.exe' -OutFile $temp
+    Invoke-WebRequest -UseBasicParsing -Headers @{ 'Cache-Control' = 'no-cache' } -Uri 'https://github.com/jay-waves/cmrak/releases/latest/download/cmrak-windows-x64.exe' -OutFile $temp
     Move-Item -Force -LiteralPath $temp -Destination $target
 } finally {
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force }

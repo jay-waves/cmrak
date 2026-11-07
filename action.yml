@@ -10,17 +10,17 @@ runs:
         CMRAK_REPOSITORY: ${{ github.action_repository || github.repository }}
       run: |
         if ($env:RUNNER_ARCH -ne 'X64') {
-          throw "cmrak release 0.5.0 supports x64 runners only; found $env:RUNNER_ARCH"
+          throw "cmrak rolling release supports x64 runners only; found $env:RUNNER_ARCH"
         }
         switch ($env:RUNNER_OS) {
           'Linux' { $asset = 'cmrak-linux-x64'; $binary = 'cmrak' }
           'Windows' { $asset = 'cmrak-windows-x64.exe'; $binary = 'cmrak.exe' }
-          default { throw "cmrak release 0.5.0 does not support $env:RUNNER_OS" }
+          default { throw "cmrak rolling release does not support $env:RUNNER_OS" }
         }
         $directory = Join-Path $env:RUNNER_TEMP 'cmrak-bin'
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
-        gh release download 0.5.0 --repo $env:CMRAK_REPOSITORY --pattern $asset --dir $directory --clobber
-        if ($LASTEXITCODE -ne 0) { throw 'Failed to download cmrak 0.5.0' }
+        gh release download --repo $env:CMRAK_REPOSITORY --pattern $asset --dir $directory --clobber
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to download latest cmrak release' }
         $executable = Join-Path $directory $binary
         Move-Item -Force (Join-Path $directory $asset) $executable
         if ($env:RUNNER_OS -eq 'Linux') {

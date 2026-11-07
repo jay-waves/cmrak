@@ -34,9 +34,11 @@ steps:
   - run: cmrak compile note.md output.html --root .
 ```
 
-将 `<owner>/cmrak@<ref>` 替换为实际仓库和分支、tag 或提交 SHA。Action 从 `0.5.0` release 下载预编译可执行文件，需要 GitHub CLI（GitHub 托管 runner 已预装），运行时不需要 Node.js 或 Rust。支持 Linux 和 Windows x64。该 release 随每次分支 push 更新，下载的版本不随 action 引用的提交固定。
+将 `<owner>/cmrak@<ref>` 替换为实际仓库和分支、tag 或提交 SHA。Action 从最新 rolling release 下载预编译可执行文件，需要 GitHub CLI（GitHub 托管 runner 已预装），运行时不需要 Node.js 或 Rust。支持 Linux 和 Windows x64。下载的构建不随 action 引用的提交固定。
 
-每次分支 push 会构建两平台并更新 `0.5.0` tag 和 release；工作流也支持手动触发。仓库 Actions 需要内容写入权限，tag 保护规则必须允许更新。
+每次分支 push 会构建两平台并发布 `rolling-YYYYMMDD-<sha6>`，日期为 UTC 构建日期，后缀为 commit SHA 的前 6 位十六进制字符；工作流也支持手动触发。包版本固定为 `0.5.0`。
+
+新 release 的资产上传完成并设为 latest 后，才删除之前的 rolling release 和对应 tag，包括旧的 `0.5.0` release。上传失败时保留之前的 release；同一天、同一 commit 重跑会复用原标签。仓库 Actions 需要内容写入权限，tag 保护规则必须允许删除旧发布标签。并发运行会取消之前尚未完成的运行。
 
 ## 使用
 
@@ -165,7 +167,7 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/jay-waves/cmrak/main/install.ps1 | iex
 ```
 
-Linux installs into `~/.local/bin`; Windows installs into `%LOCALAPPDATA%/Programs/cmrak`. Neither script modifies PATH; add the installation directory yourself if needed. Set `INSTALL_DIR` to override the destination. The release tag is updated in place by CI, so rerunning downloads the newest published build even when the version number stays the same.
+Linux installs into `~/.local/bin`; Windows installs into `%LOCALAPPDATA%/Programs/cmrak`. Neither script modifies PATH; add the installation directory yourself if needed. Set `INSTALL_DIR` to override the destination. Downloads use GitHub’s stable `releases/latest/download/` URLs, so rerunning installs the newest published build while the package version remains `0.5.0`.
 
 To choose a Windows destination while using `iex`:
 
