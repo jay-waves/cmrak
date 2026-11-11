@@ -1,11 +1,19 @@
 use std::{env, fs, path::PathBuf};
 
 fn main() {
-    let commit = env::var("CMRAK_BUILD_COMMIT").ok().filter(|v| !v.is_empty()).or_else(|| {
-        std::process::Command::new("git").args(["rev-parse", "HEAD"]).output().ok()
-            .filter(|o| o.status.success()).and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_owned())
-    }).unwrap_or_else(|| "unknown".into());
+    let commit = env::var("CMRAK_BUILD_COMMIT")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| {
+            std::process::Command::new("git")
+                .args(["rev-parse", "HEAD"])
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .map(|s| s.trim().to_owned())
+        })
+        .unwrap_or_else(|| "unknown".into());
     println!("cargo:rustc-env=CMRAK_BUILD_COMMIT={commit}");
     println!("cargo:rerun-if-changed=generated");
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());

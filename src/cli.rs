@@ -101,7 +101,11 @@ pub fn parse(values: impl IntoIterator<Item = String>) -> Result<Option<Args>, S
                 return Ok(None);
             }
             "-V" | "--version" => {
-                println!("cmrak {} (commit {})", env!("CARGO_PKG_VERSION"), env!("CMRAK_BUILD_COMMIT"));
+                println!(
+                    "cmrak {} (commit {})",
+                    env!("CARGO_PKG_VERSION"),
+                    env!("CMRAK_BUILD_COMMIT")
+                );
                 return Ok(None);
             }
             "-o" | "--output" => output = Some(PathBuf::from(argument()?)),
