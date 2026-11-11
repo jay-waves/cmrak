@@ -12,9 +12,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  CMRAK_BUILD_COMMIT: ${{ github.sha }}
+
 jobs:
-  env:
-    CMRAK_BUILD_COMMIT: ${{ github.sha }}
   windows:
     runs-on: windows-latest
     steps:
