@@ -688,6 +688,12 @@
   filter: invert(50%);
 }
 
-:scope .katex { font-size: 1em; }
+:scope .katex {
+  font-size: 1em;
+  /* KaTeX paints glyphs and SVG accents with currentColor. Keep that
+     color tied to the document theme when the surrounding element has a
+     more specific text color (for example links or footnotes). */
+  color: var(--md-fg);
+}
 
 }
