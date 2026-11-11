@@ -10,4 +10,5 @@ chmod 755 "$tmp"
 mv -f "$tmp" "$install_dir/cmrak"
 
 echo "Installed cmrak to $install_dir/cmrak"
+"$install_dir/cmrak" --version
 case ":$PATH:" in *":$install_dir:"*) ;; *) echo "Add $install_dir to PATH to run cmrak from any directory." ;; esac

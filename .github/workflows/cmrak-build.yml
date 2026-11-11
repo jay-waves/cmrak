@@ -13,6 +13,8 @@ permissions:
   contents: read
 
 jobs:
+  env:
+    CMRAK_BUILD_COMMIT: ${{ github.sha }}
   windows:
     runs-on: windows-latest
     steps:

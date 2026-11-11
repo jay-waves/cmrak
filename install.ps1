@@ -18,4 +18,5 @@ try {
 }
 
 Write-Host "Installed cmrak to $target"
+& $target --version
 Write-Host "PATH was not modified. Add $installDir to PATH to run cmrak from any directory."
