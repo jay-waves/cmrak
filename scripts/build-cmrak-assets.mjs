@@ -12,11 +12,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'generated');
 const deps = dirname(dirname(createRequire(import.meta.url).resolve('katex/package.json')));
 await mkdir(resolve(output, 'fonts'), { recursive: true });
-await build({ entryPoints: [resolve(root, 'intl.mjs')], outfile: resolve(output, 'intl.js'), bundle: true, format: 'iife', platform: 'neutral', target: 'es2020', minifyWhitespace: true, minifyIdentifiers: true, minifySyntax: false, banner: { js: 'globalThis.Intl ??= {};' }, legalComments: 'inline' });
+await build({ entryPoints: [resolve(root, 'web/runtime/intl.mjs')], outfile: resolve(output, 'intl.js'), bundle: true, format: 'iife', platform: 'neutral', target: 'es2020', minifyWhitespace: true, minifyIdentifiers: true, minifySyntax: false, banner: { js: 'globalThis.Intl ??= {};' }, legalComments: 'inline' });
 for (const stale of ['d3.css', 'd3-module.js', 'D3-LICENSE', 'viz.css']) await rm(resolve(output, stale), { force: true });
-await build({ entryPoints: [resolve(root, 'navigation.mjs')], outfile: resolve(output, 'navigation.js'), bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify: true });
+await build({ entryPoints: [resolve(root, 'web/markdown/navigation.mjs')], outfile: resolve(output, 'navigation.js'), bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify: true });
 await build({
-  entryPoints: [resolve(root, 'render.mjs')],
+  entryPoints: [resolve(root, 'web/runtime/render.mjs')],
   outfile: resolve(output, 'render.js'), bundle: true, format: 'iife',
   platform: 'neutral', mainFields: ['module', 'main'], target: 'es2020',
   // Syntax minification merges declarations into deeply nested expressions.
@@ -44,7 +44,7 @@ let highlight = await readFile(resolve(root, 'web/markdown/highlight.css'), 'utf
 highlight = highlight.replace('@scope (.reader, .code-search-results)', '@scope (#content)');
 const css = [theme, highlight,
   await readFile(resolve(root, 'web/markdown/heading-sections.css'), 'utf8'),
-  await readFile(resolve(root, 'style.css'), 'utf8'),
+  await readFile(resolve(root, 'web/markdown/style.css'), 'utf8'),
 ].join('\n');
 const sourceFonts = (await readdir(resolve(deps, 'katex/dist/fonts')))
   .filter(name => name.endsWith('.woff2'));
@@ -67,9 +67,9 @@ const compactKatex = katex.replace(/src:([^;}]+)/g, (declaration, sources) => {
 const compact = css;
 await writeFile(resolve(output, 'style.css'), compact);
 await writeFile(resolve(output, 'katex.css'), compactKatex);
-const vizCss = [await readFile(resolve(root, 'node_modules/@chartist-js/essentials/dist/styles.css'), 'utf8'), await readFile(resolve(root, 'chartist.css'), 'utf8')].join('\n');
+const vizCss = [await readFile(resolve(root, 'node_modules/@chartist-js/essentials/dist/styles.css'), 'utf8'), await readFile(resolve(root, 'web/charts/chartist.css'), 'utf8')].join('\n');
 await writeFile(resolve(output, 'chartist.css'), vizCss);
-const mermaidCss = await readFile(resolve(root, 'mermaid.css'), 'utf8');
+const mermaidCss = await readFile(resolve(root, 'web/charts/mermaid.css'), 'utf8');
 await writeFile(resolve(output, 'mermaid.css'), mermaidCss);
 const hash = createHash('sha256').update(compact).update(compactKatex).update(vizCss);
 hash.update(moduleSource).update(serverModuleSource).update(essentialsModuleSource).update(await readFile(resolve(output, 'viz.js'))).update(mermaidCss);

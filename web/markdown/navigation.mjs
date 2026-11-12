@@ -1,4 +1,4 @@
-import { fragmentTarget, revealBlock } from './web/markdown/block-navigation.mjs';
+import { fragmentTarget, revealBlock } from './block-navigation.mjs';
 import { prepareFootnotes } from './footnotes.mjs';
 const root = document.getElementById('content');
 prepareFootnotes(root);

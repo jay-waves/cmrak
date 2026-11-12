@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
-import { prepareFootnotes } from '../footnotes.mjs';
+import { prepareFootnotes } from '../web/markdown/footnotes.mjs';
 
 function fixture() {
   const { document, Event } = parseHTML(`<html><body><main id="content">

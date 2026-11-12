@@ -3,7 +3,7 @@ import * as essentials from '@chartist-js/essentials';
 import * as chartistServer from 'chartist/server';
 import { parseHTML } from 'linkedom/worker';
 import katex from 'katex';
-import { highlightSource, rawLanguage } from './web/raw/raw-highlight.mjs';
+import { highlightSource, rawLanguage } from '../raw/raw-highlight.mjs';
 import { render } from 'pele';
 
 // Only string APIs are used: no DOM, Node runtime, network or browser globals.

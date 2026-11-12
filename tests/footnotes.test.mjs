@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareFootnotes } from './footnotes.mjs';
+import { prepareFootnotes } from '../web/markdown/footnotes.mjs';
 
 function fixture() {
   const handlers = new Map();
