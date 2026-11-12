@@ -19,4 +19,4 @@ try {
 
 Write-Host "Installed cmrak to $target"
 & $target --version
-Write-Host "Add $installDir to PATH: $env:PATH = '$installDir;' + $env:PATH"
+if (-not ($env:PATH -split ';' | Where-Object { $_ -eq $installDir })) { Write-Host "Add $installDir to PATH: $env:PATH = '$installDir;' + $env:PATH" }
