@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { throw 'Only Windows x64 is supported.' }
-$installDir = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'Programs\cmrak' }
+$command = Get-Command cmrak.exe -ErrorAction SilentlyContinue
+if ($command) { $target = $command.Source; $installDir = Split-Path -Parent $target } else { $installDir = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'Programs\cmrak' }; $target = Join-Path $installDir 'cmrak.exe' }
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-$target = Join-Path $installDir 'cmrak.exe'
 $temp = Join-Path $installDir ([IO.Path]::GetRandomFileName())
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -19,4 +19,4 @@ try {
 
 Write-Host "Installed cmrak to $target"
 & $target --version
-Write-Host "PATH was not modified. Add $installDir to PATH to run cmrak from any directory."
+Write-Host "Add $installDir to PATH: $env:PATH = '$installDir;' + $env:PATH"
