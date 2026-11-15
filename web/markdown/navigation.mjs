@@ -1,7 +1,9 @@
 import { fragmentTarget, revealBlock } from './block-navigation.mjs';
 import { prepareFootnotes } from './footnotes.mjs';
+import { preparePrint } from './print.mjs';
 const root = document.getElementById('content');
 prepareFootnotes(root);
+preparePrint(root);
 let generation = 0;
 function navigate() {
   const token = ++generation;

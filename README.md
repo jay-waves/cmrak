@@ -79,6 +79,16 @@ block; lines beyond the document select the last block. Named heading anchors
 remain available. Source-line navigation needs JavaScript; exact heading
 anchors also work without it. Code files are not Markdown block documents.
 
+## Print and PDF
+
+Use the browser's Print dialog to print or save as PDF. Pages use 20 mm top/bottom
+and 18 mm side margins; choose the paper size in the dialog. With JavaScript
+enabled, collapsed sections expand and numbered footnotes appear once at the
+end of the document, with links from references and return links. Screen state
+is restored after printing. Chrome's Save as PDF preserves these internal links;
+other PDF printers and viewers may handle links differently. Disable the
+browser's headers and footers in the print dialog if they are not wanted.
+
 ## Math and charts
 
 Use `$…$` or `$$…$$` for math. Headings collapse and footnotes expand.

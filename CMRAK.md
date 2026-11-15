@@ -93,6 +93,15 @@ Repeated references in one paragraph share a panel, separate paragraphs get
 separate panels, and cyclic notes remain reference text. Math delimiters are
 `$…$` and `$$…$$`, not backslash-parenthesis or backslash-bracket pairs.
 
+`web/markdown/print.mjs` prepares a temporary endnotes section on `beforeprint`.
+It groups panels by compiler-assigned footnote number, keeps every panel ID as
+an anchor, removes nested panel copies, and adds return links for references.
+Original panels are replaced with placeholders and restored on `afterprint`,
+along with collapsed details and temporary reference IDs. Repeated print events
+are idempotent. Print CSS uses `@page` margins and the selected paper size.
+PDF link preservation depends on the browser export path; validate Chrome's
+actual PDF destinations as well as the print DOM when changing this behavior.
+
 Markdown blocks carry one-based `data-line` values. Navigation finds the block
 starting at or before a requested line, reveals collapsed ancestors, and
 corrects scrolling after fonts and images load. Named heading anchors are

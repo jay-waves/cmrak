@@ -4,7 +4,18 @@
 body { margin: 0; background: var(--md-bg); }
 #content { font-family: var(--md-font-serif); width: min(95%, 920px); padding: 0; margin: 32px auto; }
 #content img, #content video { max-width: 100%; height: auto; }
-@media print { :root { color-scheme: light; } #content { width: auto; margin: 0; } }
+@page { size: auto; margin: 20mm 18mm; }
+@media print {
+  :root { color-scheme: light; }
+  body { background: white; }
+  #content { width: auto; margin: 0; }
+  #content h1, #content h2, #content h3 { break-after: avoid; }
+  #content p { orphans: 3; widows: 3; }
+  #content .print-endnotes { border-top: 1px solid; margin-top: 2em; }
+  #content .print-endnote { margin: 1em 0; }
+  #content .print-endnote > .note-content > :first-child { margin-top: .25em; }
+  #content details > summary { list-style: none; }
+}
 /* Keep document headings on the same Latin/CJK serif stack. */
 #content h1, #content h2, #content h3, #content h4, #content h5, #content h6 { font-family: var(--md-font-serif); }
 /* Static headings are wrapped in a summary; keep h2 styled like a normal heading. */
