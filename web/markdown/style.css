@@ -2,7 +2,7 @@
   color-scheme: light dark;
 }
 body { margin: 0; background: var(--md-bg); }
-#content { font-family: var(--md-font-serif); width: min(95%, 920px); padding: 0; margin: 32px auto; }
+#content { font-family: var(--md-font-serif); width: min(95%, 920px); padding: 0; margin: 32px auto; container-type: inline-size; }
 #content img, #content video { max-width: 100%; height: auto; }
 @page { size: auto; margin: 20mm 18mm; }
 @media print {
@@ -30,6 +30,8 @@ body { margin: 0; background: var(--md-bg); }
   display: block;
   min-width: 0;
   margin: .35em 0 1rem 1rem;
+  /* Markdown containers indent from the left and share the same right edge. */
+  margin-left: calc(1rem + 100% - 100cqw);
   padding: .2rem 0 .2rem calc(var(--md-block-indent) - 1rem - 2px);
   border-left: 2px dashed var(--md-border-muted);
   color: var(--md-muted);

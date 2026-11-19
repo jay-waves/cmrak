@@ -91,6 +91,9 @@ The opt-in `cmrak-graphs` feature adds `mermaid` and `chartist` to raw HTML bloc
 Headings become native details sections with compatible anchors. Footnotes
 become native details panels after paragraphs or tables. JavaScript controls
 inline-reference toggles; without it, native details remain usable.
+CSS aligns panels to the top-level footnote column using the difference between
+the local and document widths. Markdown quotes, lists, and panels share the
+document's right edge, so this difference accounts for their left indentation.
 Repeated references in one paragraph share a panel, separate paragraphs get
 separate panels, and cyclic notes remain reference text. Math delimiters are
 `$…$` and `$$…$$`, not backslash-parenthesis or backslash-bracket pairs.
