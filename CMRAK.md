@@ -111,8 +111,11 @@ gets source positions from its parser event stream.
 Resource paths are resolved relative to input, canonicalized, and checked
 against the compilation root. Site mode rewrites Markdown links without
 recursively compiling notes; supported code links are compiled as literal
-highlighted text and reused by canonical path. Compilation failures preserve
-existing output. Diagnostics use one-based line and column positions.
+highlighted text and reused by canonical path. Typst links use the same page
+URLs, with output left to the Typst compiler. Direct Typst compilation and
+preview requests return successfully without writing output. Compilation
+failures preserve existing output. Diagnostics use one-based line and column
+positions.
 
 ## Preview and release workflows
 

@@ -47,7 +47,8 @@ retain their URLs. Site mode writes paths such as
 `_site/notes/topic.md/index.html`, copies attachments, and shares resources.
 Deploy the entire site directory. Markdown links target corresponding HTML
 paths but do not recursively compile other notes; links to supported code files
-do compile those targets. Use `--images embed` to embed site images.
+do compile those targets. CMrak skips `.typ` inputs and links to their expected
+site pages without generating them. Use `--images embed` to embed site images.
 Do not combine `--site-root` with an output path or `--standalone`.
 
 Paths are relative to the input file; `--root` defaults to the current directory

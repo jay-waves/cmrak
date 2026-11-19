@@ -3,6 +3,11 @@ use std::path::Path;
 
 use crate::{assets::escape, engine::Engine};
 
+pub(crate) fn is_typst(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("typ"))
+}
+
 pub(crate) fn language(path: &Path) -> Option<&'static str> {
     let name = path.file_name()?.to_str()?.to_ascii_lowercase();
     match name.as_str() {
@@ -41,7 +46,6 @@ pub(crate) fn language(path: &Path) -> Option<&'static str> {
             "scss" => "scss",
             "less" => "less",
             "tex" | "sty" | "cls" => "latex",
-            "typ" => "typst",
             "ps1" | "psm1" | "psd1" => "powershell",
             "cmake" => "cmake",
             "mk" => "makefile",

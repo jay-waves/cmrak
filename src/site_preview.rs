@@ -249,6 +249,9 @@ pub fn compile(values: Vec<String>) -> Result<(), String> {
     let root = dunce::canonicalize(original.root.as_deref().unwrap_or(Path::new(".")))
         .map_err(|e| e.to_string())?;
     let input = dunce::canonicalize(&original.input).map_err(|e| e.to_string())?;
+    if crate::source_code::is_typst(&original.input) || crate::source_code::is_typst(&input) {
+        return Ok(());
+    }
     let relative = input
         .strip_prefix(&root)
         .map_err(|_| "input must be inside --root")?;

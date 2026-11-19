@@ -188,6 +188,42 @@ mod tests {
     }
 
     #[test]
+    fn typst_output_is_preserved_by_direct_compilation_and_links() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let site = root.join("site");
+        let compile = |name: &str| {
+            let args = crate::cli::parse([
+                root.join(name).to_string_lossy().into_owned(),
+                "--root".into(),
+                root.to_string_lossy().into_owned(),
+                "--site-root".into(),
+                site.to_string_lossy().into_owned(),
+            ])
+            .unwrap()
+            .unwrap();
+            crate::document::compile(&args).unwrap();
+        };
+        fs::write(root.join("report.TYP"), "= Typst source").unwrap();
+        let output = page_path(&site.join("report.TYP"));
+        compile("report.TYP");
+        assert!(!output.exists());
+
+        fs::create_dir_all(output.parent().unwrap()).unwrap();
+        fs::write(&output, "<html>Published by Typst</html>").unwrap();
+        compile("report.TYP");
+
+        fs::write(root.join("note.md"), "[Report](report.TYP?view=1#intro)").unwrap();
+        compile("note.md");
+        let note = fs::read_to_string(page_path(&site.join("note.md"))).unwrap();
+        assert!(note.contains("../report.TYP/?view=1#intro"));
+        assert_eq!(
+            fs::read_to_string(output).unwrap(),
+            "<html>Published by Typst</html>"
+        );
+    }
+
+    #[test]
     fn missing_code_link_is_an_error_at_reference() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();

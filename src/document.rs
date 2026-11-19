@@ -154,7 +154,8 @@ impl Attachments {
         let path = url
             .to_file_path()
             .map_err(|_| format!("invalid code link {original:?}"))?;
-        if crate::source_code::language(&path).is_none() {
+        let typst = crate::source_code::is_typst(&path);
+        if !typst && crate::source_code::language(&path).is_none() {
             return Ok(None);
         }
         let input = dunce::canonicalize(&path)
@@ -177,7 +178,9 @@ impl Attachments {
             ));
         }
         let cached = self.compiled_code.borrow().get(&input).cloned();
-        let output = if let Some(output) = cached {
+        let output = if typst || crate::source_code::is_typst(&input) {
+            crate::site::page_path(&site.join(input.strip_prefix(&self.root).unwrap()))
+        } else if let Some(output) = cached {
             output
         } else {
             let output =
@@ -411,6 +414,9 @@ pub(crate) fn compile_document(
 ) -> Result<Vec<Diagnostic>, Vec<Diagnostic>> {
     let input =
         dunce::canonicalize(&args.input).map_err(|e| failure(format!("cannot open input: {e}")))?;
+    if crate::source_code::is_typst(&args.input) || crate::source_code::is_typst(&input) {
+        return Ok(Vec::new());
+    }
     let _code_lock = if let Some(site) = &args.site_root
         && crate::source_code::language(&input).is_some()
     {
