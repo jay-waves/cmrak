@@ -42,7 +42,7 @@ body { margin: 0; background: var(--md-bg); }
 #content [data-footnote-ref]::after { content: ""; position: absolute; inset: -10px -9px; }
 #content figure.graph-figure { box-sizing: border-box; display: table; width: min(100%, var(--viz-width, 640px)); max-width: 100%; margin: 1.75rem auto; }
 #content .graph-figure .diagram { margin: 0; }
-#content .graph-figure .diagram svg { width: 100%; }
+#content .graph-figure .diagram > svg { width: 100%; }
 #content .graph-figure .viz { width: 100%; margin: 0; }
 /* Numbered summaries are the no-script fallback. With JS, use only inline references. */
 #content details.inline-footnote > summary { cursor: pointer; }

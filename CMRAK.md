@@ -20,7 +20,9 @@ shared terms belong in [GLOSSARY.md](GLOSSARY.md).
 | `fonts/` | Source font assets and licenses |
 
 Rust parses Markdown with pulldown-cmark. Embedded QuickJS executes KaTeX,
-highlight.js, Pele, and Chartist at compilation time. Static output does not
+highlight.js, Pele, MathJax, and Chartist at compilation time. Pele's math
+callback uses MathJax with the TeX font to supply SVG paths and label dimensions
+for both HTML compilation and standalone diagram export. Static output does not
 need rendering scripts; Chartist hydration explicitly adds browser code.
 Build inputs live under `web/`, not as parallel root-level copies.
 Generated filenames remain unchanged so consumers retain their asset paths.

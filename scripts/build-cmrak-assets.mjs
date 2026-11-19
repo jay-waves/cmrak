@@ -85,6 +85,7 @@ for (const [name, path] of [
   ['Chartist-Essentials-LICENSE', 'node_modules/@chartist-js/essentials/LICENSE-MIT'],
   ['LinkeDOM-LICENSE', 'node_modules/linkedom/LICENSE'],
   ['Pele-LICENSE', 'node_modules/pele/LICENSE'],
+  ['MathJax-LICENSE', 'node_modules/@mathjax/src/LICENSE'],
 ]) await cp(resolve(deps, path.replace(/^node_modules\//, '')), resolve(output, name));
 console.log(`Prepared cmrak assets: ${output}`);
 

@@ -5,6 +5,7 @@ import { parseHTML } from 'linkedom/worker';
 import katex from 'katex';
 import { highlightSource, rawLanguage } from '../raw/raw-highlight.mjs';
 import { render } from 'pele';
+import { diagramMath } from './diagram-math.mjs';
 
 // Only string APIs are used: no DOM, Node runtime, network or browser globals.
 globalThis.renderFragment = (kind, source, language, index) => {
@@ -17,7 +18,7 @@ globalThis.renderFragment = (kind, source, language, index) => {
     } else if (kind === 'diagram') {
       html = render(source, {
         fontFamily: "Georgia, Source Han Serif, Noto Serif CJK SC, Libertinus Serif, New Computer Modern, serif",
-        idPrefix: `diagram-${index}`, autoDirection: false, maxWidth: 900,
+        idPrefix: `diagram-${index}`, autoDirection: false, maxWidth: 900, math: diagramMath(),
         // Diagram image attachments require their own asset traversal; do not
         // silently leave unmanaged images in an otherwise standalone document.
         images: false,

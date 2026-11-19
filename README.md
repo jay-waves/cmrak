@@ -102,6 +102,9 @@ Chart tags must occupy their own Markdown block and include closing tags:
 ```
 
 Mermaid also supports inline tag bodies and fenced `mermaid` blocks.
+Use `$$...$$` for TeX in supported diagram labels, such as
+`A["$$x^2$$"]` in a flowchart. Expressions that cannot be typeset display
+as source text.
 Chartist remains supported. Its JavaScript modules may import `chartist`,
 `chartist/server`, and `@chartist-js/essentials`:
 
