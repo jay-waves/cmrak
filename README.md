@@ -18,11 +18,15 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/jay-waves/cmrak/main/install.ps1 | iex
 ```
 
-Installers download the latest rolling release. Linux installs into
-`~/.local/bin`; Windows uses `%LOCALAPPDATA%/Programs/cmrak`.
-Add that directory to PATH if needed. Set `INSTALL_DIR` (PowerShell:
-`$env:INSTALL_DIR`) to override it. Rerun to update; the package version
-remains `0.5.0`.
+Installers download the latest rolling release. If `cmrak` is on PATH, the
+installer force-stops processes running that executable and replaces it in
+place. Otherwise it installs to `~/.local/bin` on Linux or
+`%LOCALAPPDATA%/Programs/cmrak` on Windows. Set `INSTALL_DIR` (PowerShell:
+`$env:INSTALL_DIR`) to override that destination.
+Linux saves the PATH update in the shell startup configuration. Open a new
+terminal to pick it up. Windows updates the user PATH and the current
+PowerShell session.
+The package version remains `0.5.0`.
 
 ## Compile
 
