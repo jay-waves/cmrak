@@ -74,6 +74,8 @@ no notification. This form chooses its own output location and does not accept
 an output path, `--site-root`, or `--standalone`.
 Directory serving runs in the foreground until Ctrl+C.
 
+Generated HTML pages use a `MD` browser tab icon.
+
 `#L42` addresses source line 42 of the compiled input file. Navigation selects
 the nearest block starting at or before that line, falling back to the first
 block; lines beyond the document select the last block. Named heading anchors

@@ -523,9 +523,10 @@ pub(crate) fn compile_document(
         )
     };
     let html = format!(
-        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"generator\" content=\"cmrak {}\"><title>{}</title>\n{stylesheet}\n{viz_style}\n{mermaid_style}\n{viz_runtime}\n</head><body><main id=\"content\">\n{body}</main>{navigation}</body></html>\n",
+        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"generator\" content=\"cmrak {}\"><title>{}</title>\n{favicon}{stylesheet}\n{viz_style}\n{mermaid_style}\n{viz_runtime}\n</head><body><main id=\"content\">\n{body}</main>{navigation}</body></html>\n",
         env!("CARGO_PKG_VERSION"),
-        escape(title)
+        escape(title),
+        favicon = include_str!("../web/favicon.html"),
     );
     let html = if let Some(site) = &args.site_root {
         crate::site::rewrite(
